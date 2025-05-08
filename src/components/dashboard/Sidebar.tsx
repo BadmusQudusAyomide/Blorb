@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+
 import {
   Home,
   Package,
@@ -20,6 +22,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 
+
 interface SubItem {
   label: string;
   path: string;
@@ -27,7 +30,7 @@ interface SubItem {
 
 interface NavItem {
   label: string;
-  icon: JSX.Element;
+  icon: ReactNode;  
   path?: string;
   key?: string;
   subItems?: SubItem[];

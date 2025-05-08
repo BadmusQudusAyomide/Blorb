@@ -6,8 +6,7 @@ import {
   DollarSign, 
   TrendingUp,
   BarChart2,
-  Users,
-  MessageSquare
+  Users
 } from 'lucide-react';
 
 const SellerDashboard = () => {
