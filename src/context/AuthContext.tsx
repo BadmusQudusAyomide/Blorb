@@ -1,4 +1,4 @@
-// src/context/AuthContext.tsx
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
