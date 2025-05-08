@@ -13,7 +13,7 @@ const SellerDashboard = () => {
   const stats = [
     { title: "Total Orders", value: "1,245", change: "+12%", icon: <ShoppingCart className="w-6 h-6 text-indigo-600" /> },
     { title: "Products", value: "342", change: "+5%", icon: <Package className="w-6 h-6 text-blue-600" /> },
-    { title: "Revenue", value: "$24,560", change: "+18%", icon: <DollarSign className="w-6 h-6 text-green-600" /> },
+    { title: "Revenue", value: "#24,560", change: "+18%", icon: <DollarSign className="w-6 h-6 text-green-600" /> },
     { title: "Growth", value: "+32%", change: "+4%", icon: <TrendingUp className="w-6 h-6 text-purple-600" /> }
   ];
 
