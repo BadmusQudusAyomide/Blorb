@@ -25,7 +25,7 @@ const SellerDashboard = () => {
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Welcome back, Sarah!</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Welcome back, Ayomide!</h2>
             <p className="text-gray-600 dark:text-gray-400">Here's what's happening with your store today.</p>
           </div>
           
