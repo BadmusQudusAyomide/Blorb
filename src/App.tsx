@@ -4,9 +4,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import SellerDashboard from './pages/SellerDashboard';
+import ProductsPage from './pages/ProductsPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth(); // Now properly typed
+  const { user } = useAuth();
   
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -27,6 +28,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <SellerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/products" 
+            element={
+              <ProtectedRoute>
+                <ProductsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/products/:tab" 
+            element={
+              <ProtectedRoute>
+                <ProductsPage />
               </ProtectedRoute>
             } 
           />
