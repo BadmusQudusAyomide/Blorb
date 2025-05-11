@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 import {
   Home,
@@ -22,7 +23,6 @@ import {
   ChevronLeft
 } from 'lucide-react';
 
-
 interface SubItem {
   label: string;
   path: string;
@@ -36,7 +36,6 @@ interface NavItem {
   subItems?: SubItem[];
   badge?: number;
 }
-
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
@@ -68,8 +67,9 @@ const Sidebar = () => {
   // Handle screen resize
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth < 1024) {
+      const isMobileView = window.innerWidth < 1024;
+      setIsMobile(isMobileView);
+      if (isMobileView) {
         setIsOpen(false);
       } else {
         setIsOpen(true);
@@ -83,6 +83,19 @@ const Sidebar = () => {
       window.removeEventListener('resize', checkScreenSize);
     };
   }, []);
+  
+  // Handle body overflow when sidebar is open on mobile
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [isMobile, isOpen]);
 
   // Navigation items with submenus
   const navItems: NavItem[] = [
@@ -173,7 +186,7 @@ const Sidebar = () => {
   ];
 
   // Calculate sidebar classes based on state
-const sidebarClasses = `
+  const sidebarClasses = `
     bg-white dark:bg-gray-900 
     transition-all duration-300 ease-in-out
     ${isOpen ? 'w-64' : 'w-20'} 
@@ -183,10 +196,10 @@ const sidebarClasses = `
     flex flex-col h-screen shadow-sm fixed
   `;
 
-  // Dark overlay for mobile when sidebar is open
+  // Blur overlay for mobile when sidebar is open - updated to use backdrop-blur
   const overlayClasses = `
-    fixed inset-0 bg-gray-900 bg-opacity-50 z-40
-    transition-opacity duration-300 ease-in-out
+    fixed inset-0 bg-gray-900/30 backdrop-blur-sm z-40
+    transition-all duration-300 ease-in-out
     ${isMobile && isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
   `;
 
@@ -202,7 +215,7 @@ const sidebarClasses = `
         </button>
       )}
       
-      {/* Dark overlay for mobile */}
+      {/* Blur overlay for mobile */}
       <div className={overlayClasses} onClick={() => setIsOpen(false)} />
       
       {/* Sidebar */}
@@ -273,14 +286,15 @@ const sidebarClasses = `
                     )}
                   </button>
                 ) : (
-                  <button
-                    onClick={() => item.path && handleNavigation(item.path)}
-                    className={`
-                      flex items-center justify-between w-full px-3 py-2 rounded-md
-                      ${isActive(item.path || '') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
-                      transition-colors duration-150 ease-in-out
-                      ${isOpen ? '' : 'justify-center'}
-                    `}
+                  <Link
+  to={item.path || '#'}
+  onClick={() => handleNavigation(item.path || '')}
+  className={`
+    flex items-center justify-between w-full px-3 py-2 rounded-md
+    ${isActive(item.path || '') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
+    transition-colors duration-150 ease-in-out
+    ${isOpen ? '' : 'justify-center'}
+  `}
                   >
                     <div className="flex items-center">
                       <span className={`${isOpen ? 'mr-3' : ''}`}>{item.icon}</span>
@@ -292,16 +306,16 @@ const sidebarClasses = `
                         {item.badge}
                       </span>
                     )}
-                  </button>
+                  </Link>
                 )}
                 
                 {/* Submenu */}
                 {item.subItems && isOpen && item.key && expandedMenus[item.key] && (
                   <div className="mt-1 ml-6 space-y-1">
                     {item.subItems.map((subItem, subIndex) => (
-                      <button
+                      <Link
                         key={subIndex}
-                        onClick={() => handleNavigation(subItem.path)}
+                        to={subItem.path}
                         className={`
                           block w-full text-left pl-3 pr-4 py-2 rounded-md text-sm
                           ${isActive(subItem.path) ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}
@@ -309,7 +323,7 @@ const sidebarClasses = `
                         `}
                       >
                         {subItem.label}
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 )}
