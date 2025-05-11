@@ -16,9 +16,10 @@ import {
   Settings,
   Box,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Menu
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ShippingMethod {
   id: string;
@@ -63,6 +64,19 @@ const ShippingPage = () => {
     status: 'active' as 'active' | 'inactive' | 'scheduled',
     regions: [] as string[]
   });
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([
     {
       id: '1',
@@ -287,63 +301,74 @@ const ShippingPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
-      <Sidebar />
+      {/* Mobile sidebar toggle */}
+      {isMobile && (
+        <button
+          className="fixed z-30 top-4 left-4 p-2 rounded-md bg-white dark:bg-gray-800 shadow-md"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        </button>
+      )}
+
+      <Sidebar/>
+      
       <TopBar />
       
-      <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
-        <div className="p-6">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Shipping</h2>
-            <p className="text-gray-600 dark:text-gray-400">Manage shipping methods, carriers, and track shipments</p>
+      <main className={`pt-16 pl-0 ${!isMobile ? 'lg:pl-64' : ''} transition-all duration-300 ease-in-out`}>
+        <div className="p-4 md:p-6">
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-1 md:mb-2">Shipping</h2>
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">Manage shipping methods, carriers, and track shipments</p>
           </div>
           
           {/* Time range selector and filters */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3 md:gap-4">
+            <div className="flex items-center space-x-1 md:space-x-2">
               <button 
-                className={`px-3 py-1 text-sm rounded-md ${timeRange === '7d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
+                className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md ${timeRange === '7d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
                 onClick={() => setTimeRange('7d')}
               >
                 7D
               </button>
               <button 
-                className={`px-3 py-1 text-sm rounded-md ${timeRange === '30d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
+                className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md ${timeRange === '30d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
                 onClick={() => setTimeRange('30d')}
               >
                 30D
               </button>
               <button 
-                className={`px-3 py-1 text-sm rounded-md ${timeRange === '90d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
+                className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md ${timeRange === '90d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
                 onClick={() => setTimeRange('90d')}
               >
                 90D
               </button>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center flex-wrap gap-2 md:gap-3">
               <div className="relative">
-                <button className="flex items-center space-x-1 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-sm">
-                  <Calendar className="w-4 h-4" />
-                  <span>Custom Range</span>
+                <button className="flex items-center space-x-1 px-2 md:px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-xs md:text-sm">
+                  <Calendar className="w-3 h-3 md:w-4 md:h-4" />
+                  <span>Range</span>
                 </button>
               </div>
               
-              <button className="flex items-center space-x-1 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-sm">
-                <Filter className="w-4 h-4" />
+              <button className="flex items-center space-x-1 px-2 md:px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-xs md:text-sm">
+                <Filter className="w-3 h-3 md:w-4 md:h-4" />
                 <span>Filters</span>
               </button>
               
-              <button className="flex items-center space-x-1 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-sm">
-                <Download className="w-4 h-4" />
+              <button className="flex items-center space-x-1 px-2 md:px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-xs md:text-sm">
+                <Download className="w-3 h-3 md:w-4 md:h-4" />
                 <span>Export</span>
               </button>
               
               {activeTab === 'methods' && (
                 <button 
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+                  className="flex items-center space-x-1 px-2 md:px-3 py-1 bg-indigo-600 text-white rounded-md text-xs md:text-sm hover:bg-indigo-700"
                   onClick={() => setShowAddMethod(true)}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3 h-3 md:w-4 md:h-4" />
                   <span>Add Method</span>
                 </button>
               )}
@@ -351,18 +376,18 @@ const ShippingPage = () => {
           </div>
           
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
             {stats.map((stat, index) => (
-              <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800 transition-all duration-150 hover:shadow-md">
+              <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 md:p-6 border border-gray-200 dark:border-gray-800 transition-all duration-150 hover:shadow-md">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
-                    <p className="text-2xl font-semibold text-gray-800 dark:text-white mt-1">{stat.value}</p>
-                    <p className={`text-sm ${stat.change.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} mt-1`}>
+                    <p className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
+                    <p className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-white mt-1">{stat.value}</p>
+                    <p className={`text-xs md:text-sm ${stat.change.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} mt-1`}>
                       {stat.change}
                     </p>
                   </div>
-                  <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30">
+                  <div className="p-1 md:p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30">
                     {stat.icon}
                   </div>
                 </div>
@@ -371,41 +396,41 @@ const ShippingPage = () => {
           </div>
           
           {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
-            <nav className="-mb-px flex space-x-8">
+          <div className="border-b border-gray-200 dark:border-gray-800 mb-4 md:mb-6 overflow-x-auto">
+            <nav className="-mb-px flex space-x-4 md:space-x-8 min-w-max">
               <button
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'methods' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'methods' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('methods')}
               >
                 <div className="flex items-center">
-                  <Truck className="w-4 h-4 mr-2" />
-                  Shipping Methods
+                  <Truck className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Shipping</span> Methods
                 </div>
               </button>
               <button
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'shipments' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'shipments' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('shipments')}
               >
                 <div className="flex items-center">
-                  <Package className="w-4 h-4 mr-2" />
+                  <Package className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                   Shipments
                 </div>
               </button>
               <button
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'carriers' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'carriers' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('carriers')}
               >
                 <div className="flex items-center">
-                  <Box className="w-4 h-4 mr-2" />
+                  <Box className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                   Carriers
                 </div>
               </button>
               <button
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'settings' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'settings' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('settings')}
               >
                 <div className="flex items-center">
-                  <Settings className="w-4 h-4 mr-2" />
+                  <Settings className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                   Settings
                 </div>
               </button>
@@ -413,13 +438,13 @@ const ShippingPage = () => {
           </div>
           
           {/* Tab Content */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-6 mb-8">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 md:p-6 mb-6 md:mb-8">
             {activeTab === 'methods' && (
               <div>
                 {/* Add Method Modal */}
                 {showAddMethod && (
-                  <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+                  <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-4 md:p-6">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Add Shipping Method</h3>
                         <button 
@@ -430,7 +455,7 @@ const ShippingPage = () => {
                         </button>
                       </div>
                       
-                      <div className="space-y-4">
+                      <div className="space-y-3 md:space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Method Name</label>
                           <input
@@ -457,7 +482,7 @@ const ShippingPage = () => {
                           </select>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost</label>
                             <input
@@ -495,12 +520,12 @@ const ShippingPage = () => {
                         
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available Regions</label>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1 md:gap-2">
                             {['US', 'CA', 'MX', 'EU', 'AS', 'AU'].map(region => (
                               <button
                                 key={region}
                                 type="button"
-                                className={`px-3 py-1 text-xs rounded-full ${newMethod.regions.includes(region) ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
+                                className={`px-2 py-0.5 md:px-3 md:py-1 text-xs rounded-full ${newMethod.regions.includes(region) ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
                                 onClick={() => {
                                   setNewMethod(prev => ({
                                     ...prev,
@@ -517,17 +542,17 @@ const ShippingPage = () => {
                         </div>
                       </div>
                       
-                      <div className="mt-6 flex justify-end space-x-3">
+                      <div className="mt-4 md:mt-6 flex justify-end space-x-2 md:space-x-3">
                         <button
                           type="button"
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          className="px-3 md:px-4 py-1 md:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           onClick={() => setShowAddMethod(false)}
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          className="px-3 md:px-4 py-1 md:py-2 border border-transparent rounded-md shadow-sm text-xs md:text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           onClick={handleAddMethod}
                         >
                           Save Method
@@ -537,17 +562,17 @@ const ShippingPage = () => {
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Shipping Methods</h3>
-                  <div className="flex items-center space-x-2">
+                  <div className="w-full md:w-auto">
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="Search methods..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-8 md:pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs md:text-sm"
                       />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                      <div className="absolute inset-y-0 left-0 pl-2 md:pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                       </div>
                     </div>
                   </div>
@@ -558,55 +583,55 @@ const ShippingPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Carrier</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Delivery Time</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Regions</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Carrier</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost</th>
+                        <th scope="col" className="hidden sm:table-cell px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Delivery Time</th>
+                        <th scope="col" className="hidden md:table-cell px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Regions</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                       {shippingMethods.map((method) => (
                         <tr key={method.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900 dark:text-white">
                             <div className="flex items-center">
-                              <Truck className="w-5 h-5 text-gray-400 mr-2" />
-                              {method.name}
+                              <Truck className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-1 md:mr-2" />
+                              <span className="truncate max-w-[100px] md:max-w-none">{method.name}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {method.carrier}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {method.cost}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="hidden sm:table-cell px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {method.deliveryTime}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="hidden md:table-cell px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex flex-wrap gap-1">
                               {method.regions.map(region => (
-                                <span key={region} className="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700">
+                                <span key={region} className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700">
                                   {region}
                                 </span>
                               ))}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(method.status)}`}>
                               {method.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium">
                             <button 
-                              className={`mr-3 ${method.status === 'active' ? 'text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300' : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300'}`}
+                              className={`mr-2 md:mr-3 text-xs md:text-sm ${method.status === 'active' ? 'text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300' : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300'}`}
                               onClick={() => toggleMethodStatus(method.id)}
                             >
                               {method.status === 'active' ? 'Deactivate' : 'Activate'}
                             </button>
-                            <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                            <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs md:text-sm">
                               Edit
                             </button>
                           </td>
@@ -620,17 +645,17 @@ const ShippingPage = () => {
             
             {activeTab === 'shipments' && (
               <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Shipments</h3>
-                  <div className="flex items-center space-x-2">
+                  <div className="w-full md:w-auto">
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="Search shipments..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-8 md:pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs md:text-sm"
                       />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                      <div className="absolute inset-y-0 left-0 pl-2 md:pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                       </div>
                     </div>
                   </div>
@@ -641,52 +666,52 @@ const ShippingPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Carrier</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tracking</th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
+                        <th scope="col" className="hidden sm:table-cell px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th scope="col" className="hidden md:table-cell px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
+                        <th scope="col" className="hidden lg:table-cell px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Carrier</th>
+                        <th scope="col" className="hidden sm:table-cell px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tracking</th>
+                        <th scope="col" className="px-4 py-2 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                       {shipments.map((shipment) => (
                         <tr key={shipment.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900 dark:text-white">
                             <a href="#" className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                               {shipment.orderId}
                             </a>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="hidden sm:table-cell px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {shipment.customer}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {new Date(shipment.date).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center">
                               {getStatusIcon(shipment.status)}
-                              <span className={`ml-2 capitalize ${getStatusBadge(shipment.status)} px-2 inline-flex text-xs leading-5 font-semibold rounded-full`}>
+                              <span className={`ml-1 md:ml-2 capitalize ${getStatusBadge(shipment.status)} px-2 inline-flex text-xs leading-5 font-semibold rounded-full`}>
                                 {shipment.status}
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="hidden md:table-cell px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {shipment.method}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="hidden lg:table-cell px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {shipment.carrier}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="hidden sm:table-cell px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             <a href="#" className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                               {shipment.trackingNumber}
                             </a>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium">
                             <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                              Track <ArrowRight className="w-4 h-4 inline ml-1" />
+                              <span className="hidden md:inline">Track </span><ArrowRight className="w-3 h-3 md:w-4 md:h-4 inline" />
                             </button>
                           </td>
                         </tr>
@@ -696,43 +721,43 @@ const ShippingPage = () => {
                 </div>
                 
                 {/* Pagination */}
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <div className="px-4 py-3 md:px-6 md:py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
                   <div className="flex-1 flex justify-between sm:hidden">
-                    <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <button className="relative inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-700 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
                       Previous
                     </button>
-                    <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <button className="ml-3 relative inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-700 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
                       Next
                     </button>
                   </div>
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="text-xs md:text-sm text-gray-700 dark:text-gray-300">
                         Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
                         <span className="font-medium">5</span> shipments
                       </p>
                     </div>
                     <div>
                       <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                        <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <button className="relative inline-flex items-center px-2 py-1 md:px-2 md:py-2 rounded-l-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
                           <span className="sr-only">Previous</span>
-                          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                          <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
                         </button>
                         <button
                           aria-current="page"
-                          className="z-10 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 text-indigo-600 dark:text-indigo-400 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                          className="z-10 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 text-indigo-600 dark:text-indigo-400 relative inline-flex items-center px-3 py-1 md:px-4 md:py-2 border text-xs md:text-sm font-medium"
                         >
                           1
                         </button>
-                        <button className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                        <button className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 relative inline-flex items-center px-3 py-1 md:px-4 md:py-2 border text-xs md:text-sm font-medium">
                           2
                         </button>
-                        <button className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                        <button className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 relative inline-flex items-center px-3 py-1 md:px-4 md:py-2 border text-xs md:text-sm font-medium">
                           3
                         </button>
-                        <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <button className="relative inline-flex items-center px-2 py-1 md:px-2 md:py-2 rounded-r-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
                           <span className="sr-only">Next</span>
-                          <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                          <ChevronRight className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
                         </button>
                       </nav>
                     </div>
@@ -743,47 +768,47 @@ const ShippingPage = () => {
             
             {activeTab === 'carriers' && (
               <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Shipping Carriers</h3>
-                  <div className="flex items-center space-x-2">
+                  <div className="w-full md:w-auto">
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="Search carriers..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-8 md:pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs md:text-sm"
                       />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                      <div className="absolute inset-y-0 left-0 pl-2 md:pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                       </div>
                     </div>
                   </div>
                 </div>
                 
                 {/* Carriers Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                   {carriers.map((carrier) => (
-                    <div key={carrier.id} className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between mb-4">
-                        <img src={carrier.logo} alt={carrier.name} className="h-8" />
+                    <div key={carrier.id} className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 md:p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <img src={carrier.logo} alt={carrier.name} className="h-6 md:h-8" />
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(carrier.status)}`}>
                           {carrier.status}
                         </span>
                       </div>
-                      <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-1">{carrier.name}</h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Last sync: {carrier.lastSync}</p>
+                      <h4 className="text-base md:text-lg font-medium text-gray-800 dark:text-white mb-1">{carrier.name}</h4>
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mb-3 md:mb-4">Last sync: {carrier.lastSync}</p>
                       {carrier.status === 'disconnected' ? (
                         <button
                           onClick={() => connectCarrier(carrier.id)}
-                          className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          className="w-full py-1.5 md:py-2 px-3 md:px-4 border border-transparent rounded-md shadow-sm text-xs md:text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         >
                           Connect
                         </button>
                       ) : (
-                        <div className="space-y-3">
-                          <button className="w-full py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <div className="space-y-2 md:space-y-3">
+                          <button className="w-full py-1.5 md:py-2 px-3 md:px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Sync Now
                           </button>
-                          <button className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-800/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                          <button className="w-full py-1.5 md:py-2 px-3 md:px-4 border border-transparent rounded-md shadow-sm text-xs md:text-sm font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-800/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Settings
                           </button>
                         </div>
@@ -795,14 +820,14 @@ const ShippingPage = () => {
             )}
             
             {activeTab === 'settings' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4 md:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                   <div className="col-span-1">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Shipping Origins</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Set up locations where your products ship from.</p>
+                    <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-2 md:mb-4">Shipping Origins</h3>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Set up locations where your products ship from.</p>
                   </div>
                   <div className="col-span-2">
-                    <div className="space-y-4">
+                    <div className="space-y-3 md:space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Shipping Address</label>
                         <textarea
@@ -812,8 +837,8 @@ const ShippingPage = () => {
                         />
                       </div>
                       <div>
-                        <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                          <Plus className="-ml-0.5 mr-2 h-4 w-4" />
+                        <button className="inline-flex items-center px-2.5 py-1 md:px-3 md:py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-xs md:text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                          <Plus className="-ml-0.5 mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                           Add Another Location
                         </button>
                       </div>
@@ -821,14 +846,14 @@ const ShippingPage = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="border-t border-gray-200 dark:border-gray-800 pt-4 md:pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                     <div className="col-span-1">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Shipping Preferences</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Configure your default shipping settings.</p>
+                      <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-2 md:mb-4">Shipping Preferences</h3>
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Configure your default shipping settings.</p>
                     </div>
                     <div className="col-span-2">
-                      <div className="space-y-4">
+                      <div className="space-y-3 md:space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Shipping Method</label>
                           <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800">
@@ -868,14 +893,14 @@ const ShippingPage = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="border-t border-gray-200 dark:border-gray-800 pt-4 md:pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                     <div className="col-span-1">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Packaging</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Configure your packaging defaults.</p>
+                      <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-2 md:mb-4">Packaging</h3>
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Configure your packaging defaults.</p>
                     </div>
                     <div className="col-span-2">
-                      <div className="space-y-4">
+                      <div className="space-y-3 md:space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Package Type</label>
                           <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800">
@@ -885,7 +910,7 @@ const ShippingPage = () => {
                             <option>Envelope</option>
                           </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Weight (lbs)</label>
                             <input
@@ -908,16 +933,16 @@ const ShippingPage = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-800">
+                <div className="flex justify-end pt-4 md:pt-6 border-t border-gray-200 dark:border-gray-800">
                   <button
                     type="button"
-                    className="bg-white dark:bg-gray-800 py-2 px-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="bg-white dark:bg-gray-800 py-1.5 md:py-2 px-3 md:px-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="ml-2 md:ml-3 inline-flex justify-center py-1.5 md:py-2 px-3 md:px-4 border border-transparent shadow-sm text-xs md:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     Save Settings
                   </button>
