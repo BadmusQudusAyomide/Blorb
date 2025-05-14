@@ -22,8 +22,9 @@ interface Product {
   name: string;
   price: number;
   category: string;
+  subCategory: string;
   stock: number;
-  image: string;
+  images: string[];
   description: string;
   sku: string;
 }
@@ -31,14 +32,55 @@ interface Product {
 interface Category {
   id: number;
   name: string;
+  subCategories: string[];
   productCount: number;
 }
+
+// Sample category data with subcategories
+const sampleCategoriesData = [
+  { 
+    id: 1, 
+    name: 'Fashion', 
+    subCategories: ['Men', 'Women', 'Children', 'Shirts', 'Trousers', 'Dresses', 'Shoes', 'Accessories'],
+    productCount: 1 
+  },
+  { 
+    id: 2, 
+    name: 'Electronics', 
+    subCategories: ['Phones', 'Laptops', 'Tablets', 'TVs', 'Cameras', 'Audio', 'Accessories'],
+    productCount: 2 
+  },
+  { 
+    id: 3, 
+    name: 'Home', 
+    subCategories: ['Furniture', 'Decor', 'Kitchen', 'Bedding', 'Bath', 'Garden', 'Lighting'],
+    productCount: 1 
+  },
+  { 
+    id: 4, 
+    name: 'Fitness', 
+    subCategories: ['Gym Equipment', 'Yoga', 'Running', 'Cycling', 'Team Sports', 'Outdoor'],
+    productCount: 1 
+  },
+  { 
+    id: 5, 
+    name: 'Beauty', 
+    subCategories: ['Skincare', 'Makeup', 'Haircare', 'Fragrance', 'Bath & Body', 'Tools & Accessories'],
+    productCount: 0 
+  },
+  { 
+    id: 6, 
+    name: 'Toys', 
+    subCategories: ['Action Figures', 'Dolls', 'Building Sets', 'Educational', 'Outdoor', 'Board Games'],
+    productCount: 0 
+  }
+];
 
 const ProductsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(sampleCategoriesData);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -46,15 +88,21 @@ const ProductsPage = () => {
     name: '',
     price: '',
     category: '',
+    subCategory: '',
     stock: '',
     description: '',
     sku: '',
-    image: null as File | null
+    images: [] as File[]
   });
-  const [newCategory, setNewCategory] = useState('');
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    subCategories: [] as string[]
+  });
+  const [newSubCategory, setNewSubCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+  const [selectedSubCategoryFilter, setSelectedSubCategoryFilter] = useState<string>('all');
   const [selectedStockFilter, setSelectedStockFilter] = useState<string>('all');
 
   // Load sample data on component mount
@@ -64,9 +112,10 @@ const ProductsPage = () => {
         id: 1,
         name: 'Premium T-Shirt',
         price: 29.99,
-        category: 'Clothing',
+        category: 'Fashion',
+        subCategory: 'Shirts',
         stock: 45,
-        image: '',
+        images: [],
         description: 'High quality cotton t-shirt with premium stitching and durable fabric',
         sku: 'TSH-001'
       },
@@ -75,8 +124,9 @@ const ProductsPage = () => {
         name: 'Wireless Headphones Pro',
         price: 199.99,
         category: 'Electronics',
+        subCategory: 'Audio',
         stock: 12,
-        image: '',
+        images: [],
         description: 'Noise cancelling wireless headphones with 30hr battery life',
         sku: 'AUD-042'
       },
@@ -85,8 +135,9 @@ const ProductsPage = () => {
         name: 'Ceramic Coffee Mug',
         price: 12.50,
         category: 'Home',
+        subCategory: 'Kitchen',
         stock: 30,
-        image: '',
+        images: [],
         description: 'Handcrafted ceramic mug with ergonomic handle',
         sku: 'HOM-205'
       },
@@ -95,8 +146,9 @@ const ProductsPage = () => {
         name: 'Yoga Mat',
         price: 34.99,
         category: 'Fitness',
+        subCategory: 'Yoga',
         stock: 8,
-        image: '',
+        images: [],
         description: 'Eco-friendly non-slip yoga mat with carrying strap',
         sku: 'FIT-112'
       },
@@ -105,31 +157,25 @@ const ProductsPage = () => {
         name: 'Smart Watch',
         price: 159.99,
         category: 'Electronics',
+        subCategory: 'Phones',
         stock: 0,
-        image: '',
+        images: [],
         description: 'Fitness tracker with heart rate monitor and GPS',
         sku: 'ELE-556'
       }
     ];
 
-    const sampleCategories: Category[] = [
-      { id: 1, name: 'Clothing', productCount: 1 },
-      { id: 2, name: 'Electronics', productCount: 2 },
-      { id: 3, name: 'Home', productCount: 1 },
-      { id: 4, name: 'Fitness', productCount: 1 }
-    ];
-
     setProducts(sampleProducts);
-    setCategories(sampleCategories);
 
     // Set active tab based on URL
     const pathParts = location.pathname.split('/');
-  if (pathParts.length > 2 && pathParts[2]) {
-    setActiveTab(pathParts[2]);
-  } else {
-    setActiveTab('all'); // Default to 'all' when at base /products route
-  }
-}, [location]);
+    if (pathParts.length > 2 && pathParts[2]) {
+      setActiveTab(pathParts[2]);
+    } else {
+      setActiveTab('all'); // Default to 'all' when at base /products route
+    }
+  }, [location]);
+
   // Handle adding a new product
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,8 +186,9 @@ const ProductsPage = () => {
       name: newProduct.name,
       price: parseFloat(newProduct.price),
       category: newProduct.category,
+      subCategory: newProduct.subCategory,
       stock: parseInt(newProduct.stock),
-      image: newProduct.image ? URL.createObjectURL(newProduct.image) : '',
+      images: newProduct.images.map(file => URL.createObjectURL(file)),
       description: newProduct.description,
       sku: newProduct.sku
     };
@@ -161,10 +208,11 @@ const ProductsPage = () => {
       name: '',
       price: '',
       category: '',
+      subCategory: '',
       stock: '',
       description: '',
       sku: '',
-      image: null
+      images: []
     });
   };
 
@@ -173,9 +221,37 @@ const ProductsPage = () => {
     e.preventDefault();
     const newId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1;
     
-    setCategories([...categories, { id: newId, name: newCategory, productCount: 0 }]);
+    setCategories([...categories, { 
+      id: newId, 
+      name: newCategory.name, 
+      subCategories: newCategory.subCategories,
+      productCount: 0 
+    }]);
     setShowAddCategoryModal(false);
-    setNewCategory('');
+    setNewCategory({
+      name: '',
+      subCategories: []
+    });
+    setNewSubCategory('');
+  };
+
+  // Add subcategory to new category
+  const handleAddSubCategory = () => {
+    if (newSubCategory.trim() && !newCategory.subCategories.includes(newSubCategory.trim())) {
+      setNewCategory({
+        ...newCategory,
+        subCategories: [...newCategory.subCategories, newSubCategory.trim()]
+      });
+      setNewSubCategory('');
+    }
+  };
+
+  // Remove subcategory from new category
+  const handleRemoveSubCategory = (subCat: string) => {
+    setNewCategory({
+      ...newCategory,
+      subCategories: newCategory.subCategories.filter(sc => sc !== subCat)
+    });
   };
 
   // Handle deleting a product
@@ -219,11 +295,16 @@ const ProductsPage = () => {
     const matchesSearch = 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.subCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = 
       selectedCategoryFilter === 'all' || 
       product.category === selectedCategoryFilter;
+    
+    const matchesSubCategory = 
+      selectedSubCategoryFilter === 'all' || 
+      product.subCategory === selectedSubCategoryFilter;
     
     const matchesStock = 
       selectedStockFilter === 'all' ||
@@ -231,11 +312,50 @@ const ProductsPage = () => {
       (selectedStockFilter === 'outOfStock' && product.stock === 0) ||
       (selectedStockFilter === 'lowStock' && product.stock > 0 && product.stock <= 10);
     
-    return matchesSearch && matchesCategory && matchesStock;
+    return matchesSearch && matchesCategory && matchesSubCategory && matchesStock;
   });
 
   // Get unique categories for filter
   const uniqueCategories = ['all', ...new Set(products.map(p => p.category))];
+  
+  // Get subcategories based on selected category filter
+  const availableSubCategories = selectedCategoryFilter === 'all' 
+    ? ['all'] 
+    : ['all', ...(categories.find(c => c.name === selectedCategoryFilter)?.subCategories || [])];
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length + newProduct.images.length > 3) {
+        alert('You can upload a maximum of 3 images');
+        return;
+      }
+      setNewProduct({
+        ...newProduct,
+        images: [...newProduct.images, ...files]
+      });
+    }
+  };
+
+  // Remove image from new product
+  const handleRemoveImage = (index: number) => {
+    const updatedImages = [...newProduct.images];
+    updatedImages.splice(index, 1);
+    setNewProduct({
+      ...newProduct,
+      images: updatedImages
+    });
+  };
+
+  // Update subcategories when category changes
+  const handleCategoryChange = (category: string) => {
+    setNewProduct({
+      ...newProduct,
+      category,
+      subCategory: ''
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
@@ -276,11 +396,11 @@ const ProductsPage = () => {
           {/* Tabs */}
           <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 dark:border-gray-700 mb-6">
             <Link
-  to="/products"
-  className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
->
-  All Products
-</Link>
+              to="/products"
+              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+            >
+              All Products
+            </Link>
             <Link
               to="/products/inventory"
               className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
@@ -326,11 +446,32 @@ const ProductsPage = () => {
                 <select
                   className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                   value={selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedCategoryFilter(e.target.value);
+                    setSelectedSubCategoryFilter('all');
+                  }}
                 >
                   <option value="all">All Categories</option>
                   {uniqueCategories.filter(c => c !== 'all').map((category) => (
                     <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+              
+              <div className="relative hidden md:block">
+                <select
+                  className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                  value={selectedSubCategoryFilter}
+                  onChange={(e) => setSelectedSubCategoryFilter(e.target.value)}
+                  disabled={selectedCategoryFilter === 'all'}
+                >
+                  {availableSubCategories.map((subCategory) => (
+                    <option key={subCategory} value={subCategory}>
+                      {subCategory === 'all' ? 
+                        (selectedCategoryFilter === 'all' ? 'All Subcategories' : 'All') : 
+                        subCategory}
+                    </option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -355,17 +496,37 @@ const ProductsPage = () => {
           {/* Mobile filters */}
           {showMobileFilters && (
             <div className="md:hidden bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                   <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                     value={selectedCategoryFilter}
-                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedCategoryFilter(e.target.value);
+                      setSelectedSubCategoryFilter('all');
+                    }}
                   >
-                    <option value="all">All</option>
+                    <option value="all">All Categories</option>
                     {uniqueCategories.filter(c => c !== 'all').map((category) => (
                       <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcategory</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                    value={selectedSubCategoryFilter}
+                    onChange={(e) => setSelectedSubCategoryFilter(e.target.value)}
+                    disabled={selectedCategoryFilter === 'all'}
+                  >
+                    {availableSubCategories.map((subCategory) => (
+                      <option key={subCategory} value={subCategory}>
+                        {subCategory === 'all' ? 
+                          (selectedCategoryFilter === 'all' ? 'All Subcategories' : 'All') : 
+                          subCategory}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -376,7 +537,7 @@ const ProductsPage = () => {
                     value={selectedStockFilter}
                     onChange={(e) => setSelectedStockFilter(e.target.value)}
                   >
-                    <option value="all">All</option>
+                    <option value="all">All Stock</option>
                     <option value="inStock">In Stock</option>
                     <option value="lowStock">Low Stock</option>
                     <option value="outOfStock">Out of Stock</option>
@@ -422,6 +583,19 @@ const ProductsPage = () => {
                       <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         <button 
                           className="flex items-center focus:outline-none"
+                          onClick={() => requestSort('subCategory')}
+                        >
+                          Subcategory
+                          {sortConfig.key === 'subCategory' && (
+                            sortConfig.direction === 'asc' ? 
+                            <ChevronUp className="ml-1 w-3 h-3" /> : 
+                            <ChevronDown className="ml-1 w-3 h-3" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <button 
+                          className="flex items-center focus:outline-none"
                           onClick={() => requestSort('price')}
                         >
                           Price
@@ -456,12 +630,19 @@ const ProductsPage = () => {
                         <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              {product.image ? (
-                                <img 
-                                  src={product.image} 
-                                  alt={product.name} 
-                                  className="w-10 h-10 rounded-md object-cover mr-3"
-                                />
+                              {product.images.length > 0 ? (
+                                <div className="relative">
+                                  <img 
+                                    src={product.images[0]} 
+                                    alt={product.name} 
+                                    className="w-10 h-10 rounded-md object-cover mr-3"
+                                  />
+                                  {product.images.length > 1 && (
+                                    <div className="absolute -bottom-1 -right-1 bg-gray-800 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                      +{product.images.length - 1}
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
                                 <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
                                   <ImageIcon className="w-5 h-5 text-gray-400" />
@@ -475,6 +656,9 @@ const ProductsPage = () => {
                           </td>
                           <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 text-sm">
                             {product.category}
+                          </td>
+                          <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 text-sm">
+                            {product.subCategory}
                           </td>
                           <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-gray-900 dark:text-white text-sm">
                             ${product.price.toFixed(2)}
@@ -508,7 +692,7 @@ const ProductsPage = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                           No products found matching your criteria
                         </td>
                       </tr>
@@ -560,9 +744,9 @@ const ProductsPage = () => {
                       <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            {product.image ? (
+                            {product.images.length > 0 ? (
                               <img 
-                                src={product.image} 
+                                src={product.images[0]} 
                                 alt={product.name} 
                                 className="w-10 h-10 rounded-md object-cover mr-3"
                               />
@@ -633,10 +817,28 @@ const ProductsPage = () => {
                       </button>
                     </div>
                   </div>
+                  <div className="mt-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcategories:</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {category.subCategories.slice(0, 3).map((subCat) => (
+                        <span key={subCat} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">
+                          {subCat}
+                        </span>
+                      ))}
+                      {category.subCategories.length > 3 && (
+                        <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">
+                          +{category.subCategories.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div className="mt-4 flex justify-between items-center">
                     <Link 
                       to="/products" 
-                      onClick={() => setSelectedCategoryFilter(category.name)}
+                      onClick={() => {
+                        setSelectedCategoryFilter(category.name);
+                        setSelectedSubCategoryFilter('all');
+                      }}
                       className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
                     >
                       View products
@@ -668,55 +870,64 @@ const ProductsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Image
+                          Product Images (Max 3)
                         </label>
-                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg dark:border-gray-700">
-                          <div className="space-y-1 text-center">
-                            {newProduct.image ? (
-                              <>
-                                <img 
-                                  src={URL.createObjectURL(newProduct.image)} 
-                                  alt="Preview" 
-                                  className="mx-auto h-32 w-32 object-cover rounded-md"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setNewProduct({...newProduct, image: null})}
-                                  className="text-sm text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300"
-                                >
-                                  Remove image
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <div className="flex justify-center">
-                                  <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                </div>
-                                <div className="flex flex-col sm:flex-row text-sm text-gray-600 dark:text-gray-400 items-center justify-center">
-                                  <label
-                                    htmlFor="product-image"
-                                    className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none dark:bg-gray-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                        <div className="mt-1 flex flex-col space-y-4">
+                          {/* Display uploaded images */}
+                          {newProduct.images.length > 0 && (
+                            <div className="flex flex-wrap gap-3">
+                              {newProduct.images.map((image, index) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={URL.createObjectURL(image)} 
+                                    alt={`Preview ${index + 1}`} 
+                                    className="h-24 w-24 object-cover rounded-md"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(index)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                   >
-                                    <span>Upload a file</span>
-                                    <input
-                                      id="product-image"
-                                      name="product-image"
-                                      type="file"
-                                      className="sr-only"
-                                      onChange={(e) => {
-                                        if (e.target.files && e.target.files[0]) {
-                                          setNewProduct({...newProduct, image: e.target.files[0]});
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                  <p className="sm:pl-1 mt-1 sm:mt-0">or drag and drop</p>
+                                    <X className="w-3 h-3" />
+                                  </button>
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  PNG, JPG, GIF up to 10MB
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Upload area */}
+                          <div className={`px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg dark:border-gray-700 ${newProduct.images.length >= 3 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                            <div className="space-y-1 text-center">
+                              <div className="flex justify-center">
+                                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                              </div>
+                              <div className="flex flex-col sm:flex-row text-sm text-gray-600 dark:text-gray-400 items-center justify-center">
+                                <label
+                                  htmlFor="product-images"
+                                  className={`relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none dark:bg-gray-900 dark:text-indigo-400 dark:hover:text-indigo-300 ${newProduct.images.length >= 3 ? 'pointer-events-none' : ''}`}
+                                >
+                                  <span>Upload files</span>
+                                  <input
+                                    id="product-images"
+                                    name="product-images"
+                                    type="file"
+                                    className="sr-only"
+                                    onChange={handleImageUpload}
+                                    multiple
+                                    disabled={newProduct.images.length >= 3}
+                                  />
+                                </label>
+                                <p className="sm:pl-1 mt-1 sm:mt-0">or drag and drop</p>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                PNG, JPG, GIF up to 10MB
+                              </p>
+                              {newProduct.images.length > 0 && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                  {3 - newProduct.images.length} more can be uploaded
                                 </p>
-                              </>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -757,12 +968,31 @@ const ProductsPage = () => {
                           id="product-category"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.category}
-                          onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                          onChange={(e) => handleCategoryChange(e.target.value)}
                           required
                         >
                           <option value="">Select a category</option>
                           {categories.map((category) => (
                             <option key={category.id} value={category.name}>{category.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="col-span-2 md:col-span-1">
+                        <label htmlFor="product-subcategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Subcategory
+                        </label>
+                        <select
+                          id="product-subcategory"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.subCategory}
+                          onChange={(e) => setNewProduct({...newProduct, subCategory: e.target.value})}
+                          required
+                          disabled={!newProduct.category}
+                        >
+                          <option value="">Select a subcategory</option>
+                          {newProduct.category && categories.find(c => c.name === newProduct.category)?.subCategories.map((subCategory) => (
+                            <option key={subCategory} value={subCategory}>{subCategory}</option>
                           ))}
                         </select>
                       </div>
@@ -852,7 +1082,7 @@ const ProductsPage = () => {
                     </button>
                   </div>
                   <form onSubmit={handleAddCategory}>
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <label htmlFor="category-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Category Name
                       </label>
@@ -860,11 +1090,52 @@ const ProductsPage = () => {
                         type="text"
                         id="category-name"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
+                        value={newCategory.name}
+                        onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
                         required
                       />
                     </div>
+                    
+                    <div className="mb-4">
+                      <label htmlFor="subcategory-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Subcategories
+                      </label>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          id="subcategory-name"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newSubCategory}
+                          onChange={(e) => setNewSubCategory(e.target.value)}
+                          placeholder="Add subcategory"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddSubCategory}
+                          className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      
+                      {newCategory.subCategories.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {newCategory.subCategories.map((subCat) => (
+                            <div key={subCat} className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1">
+                              <span className="text-sm text-gray-800 dark:text-gray-200">{subCat}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSubCategory(subCat)}
+                                className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
                     <div className="flex justify-end space-x-3">
                       <button
                         type="button"
