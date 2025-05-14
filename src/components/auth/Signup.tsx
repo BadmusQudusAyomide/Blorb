@@ -1,5 +1,6 @@
+// src/pages/Signup.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Signup = () => {
@@ -7,14 +8,29 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) return alert("Passwords don't match");
-    signup(email, password);
-  };
+    
+    if (password !== confirmPassword) {
+      return setError("Passwords don't match");
+    }
 
+    try {
+      setError('');
+      setLoading(true);
+      await signup(email, password);
+      navigate('/');
+    } catch (error) {
+      setError('Failed to create an account');
+      console.error(error);
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -24,6 +40,12 @@ const Signup = () => {
             Create a new account
           </h2>
         </div>
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
         
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -94,9 +116,10 @@ const Signup = () => {
 
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={loading}
+            className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            Sign up
+            {loading ? 'Creating account...' : 'Sign up'}
           </button>
         </form>
 
