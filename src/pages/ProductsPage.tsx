@@ -14,73 +14,51 @@ import {
   MoreVertical,
   Sliders
 } from 'lucide-react';
+import { 
+  collection, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  onSnapshot, 
+  query, 
+  orderBy,
+  where 
+} from 'firebase/firestore';
+import { db } from '../firebase.config';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
+import { uploadImage } from '../utils/cloudinary';
+import { useAuth } from '../context/AuthContext';
 
 interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
   category: string;
-  subCategory: string;
   stock: number;
   images: string[];
   description: string;
   sku: string;
+  sellerId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface Category {
-  id: number;
+  id: string;
   name: string;
-  subCategories: string[];
-  productCount: number;
+  description: string;
+  imageUrl: string;
+  productCount?: number;
+  createdAt?: Date;
 }
-
-// Sample category data with subcategories
-const sampleCategoriesData = [
-  { 
-    id: 1, 
-    name: 'Fashion', 
-    subCategories: ['Men', 'Women', 'Children', 'Shirts', 'Trousers', 'Dresses', 'Shoes', 'Accessories'],
-    productCount: 1 
-  },
-  { 
-    id: 2, 
-    name: 'Electronics', 
-    subCategories: ['Phones', 'Laptops', 'Tablets', 'TVs', 'Cameras', 'Audio', 'Accessories'],
-    productCount: 2 
-  },
-  { 
-    id: 3, 
-    name: 'Home', 
-    subCategories: ['Furniture', 'Decor', 'Kitchen', 'Bedding', 'Bath', 'Garden', 'Lighting'],
-    productCount: 1 
-  },
-  { 
-    id: 4, 
-    name: 'Fitness', 
-    subCategories: ['Gym Equipment', 'Yoga', 'Running', 'Cycling', 'Team Sports', 'Outdoor'],
-    productCount: 1 
-  },
-  { 
-    id: 5, 
-    name: 'Beauty', 
-    subCategories: ['Skincare', 'Makeup', 'Haircare', 'Fragrance', 'Bath & Body', 'Tools & Accessories'],
-    productCount: 0 
-  },
-  { 
-    id: 6, 
-    name: 'Toys', 
-    subCategories: ['Action Figures', 'Dolls', 'Building Sets', 'Educational', 'Outdoor', 'Board Games'],
-    productCount: 0 
-  }
-];
 
 const ProductsPage = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>(sampleCategoriesData);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -88,186 +66,195 @@ const ProductsPage = () => {
     name: '',
     price: '',
     category: '',
-    subCategory: '',
     stock: '',
     description: '',
     sku: '',
     images: [] as File[]
   });
-  const [newCategory, setNewCategory] = useState({
-    name: '',
-    subCategories: [] as string[]
-  });
-  const [newSubCategory, setNewSubCategory] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
-  const [selectedSubCategoryFilter, setSelectedSubCategoryFilter] = useState<string>('all');
   const [selectedStockFilter, setSelectedStockFilter] = useState<string>('all');
 
-  // Load sample data on component mount
+  // Load products on component mount
   useEffect(() => {
-    const sampleProducts: Product[] = [
-      {
-        id: 1,
-        name: 'Premium T-Shirt',
-        price: 29.99,
-        category: 'Fashion',
-        subCategory: 'Shirts',
-        stock: 45,
-        images: [],
-        description: 'High quality cotton t-shirt with premium stitching and durable fabric',
-        sku: 'TSH-001'
-      },
-      {
-        id: 2,
-        name: 'Wireless Headphones Pro',
-        price: 199.99,
-        category: 'Electronics',
-        subCategory: 'Audio',
-        stock: 12,
-        images: [],
-        description: 'Noise cancelling wireless headphones with 30hr battery life',
-        sku: 'AUD-042'
-      },
-      {
-        id: 3,
-        name: 'Ceramic Coffee Mug',
-        price: 12.50,
-        category: 'Home',
-        subCategory: 'Kitchen',
-        stock: 30,
-        images: [],
-        description: 'Handcrafted ceramic mug with ergonomic handle',
-        sku: 'HOM-205'
-      },
-      {
-        id: 4,
-        name: 'Yoga Mat',
-        price: 34.99,
-        category: 'Fitness',
-        subCategory: 'Yoga',
-        stock: 8,
-        images: [],
-        description: 'Eco-friendly non-slip yoga mat with carrying strap',
-        sku: 'FIT-112'
-      },
-      {
-        id: 5,
-        name: 'Smart Watch',
-        price: 159.99,
-        category: 'Electronics',
-        subCategory: 'Phones',
-        stock: 0,
-        images: [],
-        description: 'Fitness tracker with heart rate monitor and GPS',
-        sku: 'ELE-556'
-      }
-    ];
+    if (!user?.uid) return;
 
-    setProducts(sampleProducts);
+    // Set up real-time listener for products
+    const productsRef = collection(db, 'products');
+    const productsQuery = query(
+      productsRef,
+      where('sellerId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeProducts = onSnapshot(productsQuery, (snapshot) => {
+      const productsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      })) as Product[];
+      setProducts(productsData);
+    });
+
+    // Set up real-time listener for categories
+    const categoriesRef = collection(db, 'categories');
+    const categoriesQuery = query(categoriesRef, orderBy('name'));
+    const unsubscribeCategories = onSnapshot(categoriesQuery, (snapshot) => {
+      const categoriesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      })) as Category[];
+      setCategories(categoriesData);
+    });
 
     // Set active tab based on URL
     const pathParts = location.pathname.split('/');
     if (pathParts.length > 2 && pathParts[2]) {
       setActiveTab(pathParts[2]);
     } else {
-      setActiveTab('all'); // Default to 'all' when at base /products route
+      setActiveTab('all');
     }
-  }, [location]);
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeProducts();
+      unsubscribeCategories();
+    };
+  }, [user?.uid, location]);
+
+  // Function to generate SKU
+  const generateSKU = (category: string) => {
+    const prefix = category ? category.substring(0, 3).toUpperCase() : 'PRD';
+    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${prefix}-${randomNum}`;
+  };
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newImages = Array.from(files);
+      if (newProduct.images.length + newImages.length <= 4) {
+        setNewProduct(prev => ({
+          ...prev,
+          images: [...prev.images, ...newImages]
+        }));
+      } else {
+        alert('Maximum 4 images allowed');
+      }
+    }
+  };
+
+  // Remove image
+  const removeImage = (index: number) => {
+    setNewProduct(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
 
   // Handle adding a new product
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
     
-    const productToAdd: Product = {
-      id: newId,
-      name: newProduct.name,
-      price: parseFloat(newProduct.price),
-      category: newProduct.category,
-      subCategory: newProduct.subCategory,
-      stock: parseInt(newProduct.stock),
-      images: newProduct.images.map(file => URL.createObjectURL(file)),
-      description: newProduct.description,
-      sku: newProduct.sku
-    };
-
-    setProducts([...products, productToAdd]);
-    
-    // Update category count
-    const updatedCategories = categories.map(cat => 
-      cat.name === newProduct.category 
-        ? { ...cat, productCount: cat.productCount + 1 } 
-        : cat
-    );
-    setCategories(updatedCategories);
-    
-    setShowAddProductModal(false);
-    setNewProduct({
-      name: '',
-      price: '',
-      category: '',
-      subCategory: '',
-      stock: '',
-      description: '',
-      sku: '',
-      images: []
-    });
-  };
-
-  // Handle adding a new category
-  const handleAddCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1;
-    
-    setCategories([...categories, { 
-      id: newId, 
-      name: newCategory.name, 
-      subCategories: newCategory.subCategories,
-      productCount: 0 
-    }]);
-    setShowAddCategoryModal(false);
-    setNewCategory({
-      name: '',
-      subCategories: []
-    });
-    setNewSubCategory('');
-  };
-
-  // Add subcategory to new category
-  const handleAddSubCategory = () => {
-    if (newSubCategory.trim() && !newCategory.subCategories.includes(newSubCategory.trim())) {
-      setNewCategory({
-        ...newCategory,
-        subCategories: [...newCategory.subCategories, newSubCategory.trim()]
-      });
-      setNewSubCategory('');
+    if (!user?.uid) {
+      console.error('No user logged in');
+      return;
     }
-  };
 
-  // Remove subcategory from new category
-  const handleRemoveSubCategory = (subCat: string) => {
-    setNewCategory({
-      ...newCategory,
-      subCategories: newCategory.subCategories.filter(sc => sc !== subCat)
-    });
-  };
-
-  // Handle deleting a product
-  const handleDeleteProduct = (id: number) => {
-    const productToDelete = products.find(p => p.id === id);
-    if (productToDelete) {
+    try {
+      // Upload images to Cloudinary first
+      const imageUrls = await Promise.all(
+        newProduct.images.map(image => uploadImage(image))
+      );
+      
+      // Add to Firestore
+      const productsRef = collection(db, 'products');
+      await addDoc(productsRef, {
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        category: newProduct.category,
+        stock: parseInt(newProduct.stock),
+        images: imageUrls,
+        description: newProduct.description,
+        sku: newProduct.sku,
+        sellerId: user.uid,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
       // Update category count
       const updatedCategories = categories.map(cat => 
-        cat.name === productToDelete.category 
-          ? { ...cat, productCount: cat.productCount - 1 } 
+        cat.name === newProduct.category 
+          ? { ...cat, productCount: (cat.productCount || 0) + 1 } 
           : cat
       );
       setCategories(updatedCategories);
+      
+      setShowAddProductModal(false);
+      setNewProduct({
+        name: '',
+        price: '',
+        category: '',
+        stock: '',
+        description: '',
+        sku: '',
+        images: []
+      });
+    } catch (error) {
+      console.error('Error adding product:', error);
+      // You might want to show an error message to the user here
     }
-    
-    setProducts(products.filter(product => product.id !== id));
+  };
+
+  // Handle adding a new category
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const categoriesRef = collection(db, 'categories');
+      await addDoc(categoriesRef, {
+        name: newCategory,
+        description: '',
+        imageUrl: 'https://example.com/placeholder.jpg',
+        createdAt: new Date(),
+        productCount: 0
+      });
+      
+    setShowAddCategoryModal(false);
+    setNewCategory('');
+    } catch (error) {
+      console.error('Error adding category:', error);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  // Handle deleting a product
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      const productRef = doc(db, 'products', productId);
+      await deleteDoc(productRef);
+      
+      // Category count will update automatically through the listener
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  // Handle deleting a category
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      const categoryRef = doc(db, 'categories', categoryId);
+      await deleteDoc(categoryRef);
+      // The UI will update automatically thanks to the onSnapshot listener
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      // You might want to show an error message to the user here
+    }
   };
 
   // Handle sorting
@@ -281,10 +268,18 @@ const ProductsPage = () => {
 
   // Apply sorting
   const sortedProducts = [...products].sort((a, b) => {
-    if (a[sortConfig.key as keyof Product] < b[sortConfig.key as keyof Product]) {
+    const aValue = a[sortConfig.key as keyof Product];
+    const bValue = b[sortConfig.key as keyof Product];
+    
+    // Handle undefined values
+    if (aValue === undefined && bValue === undefined) return 0;
+    if (aValue === undefined) return 1;
+    if (bValue === undefined) return -1;
+    
+    if (aValue < bValue) {
       return sortConfig.direction === 'asc' ? -1 : 1;
     }
-    if (a[sortConfig.key as keyof Product] > b[sortConfig.key as keyof Product]) {
+    if (aValue > bValue) {
       return sortConfig.direction === 'asc' ? 1 : -1;
     }
     return 0;
@@ -295,16 +290,11 @@ const ProductsPage = () => {
     const matchesSearch = 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.subCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = 
       selectedCategoryFilter === 'all' || 
       product.category === selectedCategoryFilter;
-    
-    const matchesSubCategory = 
-      selectedSubCategoryFilter === 'all' || 
-      product.subCategory === selectedSubCategoryFilter;
     
     const matchesStock = 
       selectedStockFilter === 'all' ||
@@ -312,50 +302,11 @@ const ProductsPage = () => {
       (selectedStockFilter === 'outOfStock' && product.stock === 0) ||
       (selectedStockFilter === 'lowStock' && product.stock > 0 && product.stock <= 10);
     
-    return matchesSearch && matchesCategory && matchesSubCategory && matchesStock;
+    return matchesSearch && matchesCategory && matchesStock;
   });
 
   // Get unique categories for filter
   const uniqueCategories = ['all', ...new Set(products.map(p => p.category))];
-  
-  // Get subcategories based on selected category filter
-  const availableSubCategories = selectedCategoryFilter === 'all' 
-    ? ['all'] 
-    : ['all', ...(categories.find(c => c.name === selectedCategoryFilter)?.subCategories || [])];
-
-  // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      if (files.length + newProduct.images.length > 3) {
-        alert('You can upload a maximum of 3 images');
-        return;
-      }
-      setNewProduct({
-        ...newProduct,
-        images: [...newProduct.images, ...files]
-      });
-    }
-  };
-
-  // Remove image from new product
-  const handleRemoveImage = (index: number) => {
-    const updatedImages = [...newProduct.images];
-    updatedImages.splice(index, 1);
-    setNewProduct({
-      ...newProduct,
-      images: updatedImages
-    });
-  };
-
-  // Update subcategories when category changes
-  const handleCategoryChange = (category: string) => {
-    setNewProduct({
-      ...newProduct,
-      category,
-      subCategory: ''
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
@@ -381,26 +332,17 @@ const ProductsPage = () => {
                 <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Add Product
               </button>
-              {activeTab === 'categories' && (
-                <button 
-                  onClick={() => setShowAddCategoryModal(true)}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base w-full md:w-auto justify-center"
-                >
-                  <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  Add Category
-                </button>
-              )}
             </div>
           </div>
 
           {/* Tabs */}
           <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 dark:border-gray-700 mb-6">
             <Link
-              to="/products"
-              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-            >
-              All Products
-            </Link>
+  to="/products"
+  className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+>
+  All Products
+</Link>
             <Link
               to="/products/inventory"
               className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
@@ -446,32 +388,11 @@ const ProductsPage = () => {
                 <select
                   className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                   value={selectedCategoryFilter}
-                  onChange={(e) => {
-                    setSelectedCategoryFilter(e.target.value);
-                    setSelectedSubCategoryFilter('all');
-                  }}
+                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
                 >
                   <option value="all">All Categories</option>
                   {uniqueCategories.filter(c => c !== 'all').map((category) => (
                     <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-              
-              <div className="relative hidden md:block">
-                <select
-                  className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                  value={selectedSubCategoryFilter}
-                  onChange={(e) => setSelectedSubCategoryFilter(e.target.value)}
-                  disabled={selectedCategoryFilter === 'all'}
-                >
-                  {availableSubCategories.map((subCategory) => (
-                    <option key={subCategory} value={subCategory}>
-                      {subCategory === 'all' ? 
-                        (selectedCategoryFilter === 'all' ? 'All Subcategories' : 'All') : 
-                        subCategory}
-                    </option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -496,37 +417,17 @@ const ProductsPage = () => {
           {/* Mobile filters */}
           {showMobileFilters && (
             <div className="md:hidden bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                   <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                     value={selectedCategoryFilter}
-                    onChange={(e) => {
-                      setSelectedCategoryFilter(e.target.value);
-                      setSelectedSubCategoryFilter('all');
-                    }}
+                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
                   >
-                    <option value="all">All Categories</option>
+                    <option value="all">All</option>
                     {uniqueCategories.filter(c => c !== 'all').map((category) => (
                       <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcategory</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-                    value={selectedSubCategoryFilter}
-                    onChange={(e) => setSelectedSubCategoryFilter(e.target.value)}
-                    disabled={selectedCategoryFilter === 'all'}
-                  >
-                    {availableSubCategories.map((subCategory) => (
-                      <option key={subCategory} value={subCategory}>
-                        {subCategory === 'all' ? 
-                          (selectedCategoryFilter === 'all' ? 'All Subcategories' : 'All') : 
-                          subCategory}
-                      </option>
                     ))}
                   </select>
                 </div>
@@ -537,7 +438,7 @@ const ProductsPage = () => {
                     value={selectedStockFilter}
                     onChange={(e) => setSelectedStockFilter(e.target.value)}
                   >
-                    <option value="all">All Stock</option>
+                    <option value="all">All</option>
                     <option value="inStock">In Stock</option>
                     <option value="lowStock">Low Stock</option>
                     <option value="outOfStock">Out of Stock</option>
@@ -583,19 +484,6 @@ const ProductsPage = () => {
                       <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         <button 
                           className="flex items-center focus:outline-none"
-                          onClick={() => requestSort('subCategory')}
-                        >
-                          Subcategory
-                          {sortConfig.key === 'subCategory' && (
-                            sortConfig.direction === 'asc' ? 
-                            <ChevronUp className="ml-1 w-3 h-3" /> : 
-                            <ChevronDown className="ml-1 w-3 h-3" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        <button 
-                          className="flex items-center focus:outline-none"
                           onClick={() => requestSort('price')}
                         >
                           Price
@@ -631,17 +519,15 @@ const ProductsPage = () => {
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               {product.images.length > 0 ? (
-                                <div className="relative">
-                                  <img 
-                                    src={product.images[0]} 
-                                    alt={product.name} 
-                                    className="w-10 h-10 rounded-md object-cover mr-3"
-                                  />
-                                  {product.images.length > 1 && (
-                                    <div className="absolute -bottom-1 -right-1 bg-gray-800 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                      +{product.images.length - 1}
-                                    </div>
-                                  )}
+                                <div className="flex space-x-4">
+                                  {product.images.slice(0, 3).map((image, index) => (
+                                <img 
+                                      key={index}
+                                      src={image} 
+                                  alt={product.name} 
+                                      className="w-10 h-10 rounded-md object-cover"
+                                />
+                                  ))}
                                 </div>
                               ) : (
                                 <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
@@ -656,9 +542,6 @@ const ProductsPage = () => {
                           </td>
                           <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 text-sm">
                             {product.category}
-                          </td>
-                          <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 text-sm">
-                            {product.subCategory}
                           </td>
                           <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-gray-900 dark:text-white text-sm">
                             ${product.price.toFixed(2)}
@@ -692,7 +575,7 @@ const ProductsPage = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                           No products found matching your criteria
                         </td>
                       </tr>
@@ -745,11 +628,16 @@ const ProductsPage = () => {
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             {product.images.length > 0 ? (
+                              <div className="flex space-x-4">
+                                {product.images.slice(0, 3).map((image, index) => (
                               <img 
-                                src={product.images[0]} 
+                                    key={index}
+                                    src={image} 
                                 alt={product.name} 
-                                className="w-10 h-10 rounded-md object-cover mr-3"
+                                    className="w-10 h-10 rounded-md object-cover"
                               />
+                                ))}
+                              </div>
                             ) : (
                               <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
                                 <ImageIcon className="w-5 h-5 text-gray-400" />
@@ -805,47 +693,36 @@ const ProductsPage = () => {
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white">{category.name}</h3>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {category.productCount} {category.productCount === 1 ? 'product' : 'products'}
+                        {category.description || 'No description available'}
                       </p>
                     </div>
                     <div className="flex space-x-2">
                       <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                         <Edit className="w-5 h-5" />
                       </button>
-                      <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                      <button 
+                        onClick={() => handleDeleteCategory(category.id)}
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      >
                         <Trash2 className="w-5 h-5" />
                       </button>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcategories:</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {category.subCategories.slice(0, 3).map((subCat) => (
-                        <span key={subCat} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">
-                          {subCat}
-                        </span>
-                      ))}
-                      {category.subCategories.length > 3 && (
-                        <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">
-                          +{category.subCategories.length - 3} more
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="mt-4 flex justify-between items-center">
                     <Link 
                       to="/products" 
-                      onClick={() => {
-                        setSelectedCategoryFilter(category.name);
-                        setSelectedSubCategoryFilter('all');
-                      }}
+                      onClick={() => setSelectedCategoryFilter(category.name)}
                       className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
                     >
                       View products
                     </Link>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                      {category.id}
-                    </span>
+                    {category.imageUrl && (
+                      <img 
+                        src={category.imageUrl} 
+                        alt={category.name} 
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    )}
                   </div>
                 </div>
               ))}
@@ -868,107 +745,116 @@ const ProductsPage = () => {
                   </div>
                   <form onSubmit={handleAddProduct}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+                      {/* Product Images */}
                       <div className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Images (Max 3)
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Product Images <span className="text-xs text-gray-500">(Max 4 images)</span>
                         </label>
-                        <div className="mt-1 flex flex-col space-y-4">
-                          {/* Display uploaded images */}
-                          {newProduct.images.length > 0 && (
-                            <div className="flex flex-wrap gap-3">
-                              {newProduct.images.map((image, index) => (
-                                <div key={index} className="relative">
-                                  <img 
-                                    src={URL.createObjectURL(image)} 
-                                    alt={`Preview ${index + 1}`} 
-                                    className="h-24 w-24 object-cover rounded-md"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage(index)}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* Upload area */}
-                          <div className={`px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg dark:border-gray-700 ${newProduct.images.length >= 3 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                            <div className="space-y-1 text-center">
-                              <div className="flex justify-center">
-                                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                              </div>
-                              <div className="flex flex-col sm:flex-row text-sm text-gray-600 dark:text-gray-400 items-center justify-center">
-                                <label
-                                  htmlFor="product-images"
-                                  className={`relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none dark:bg-gray-900 dark:text-indigo-400 dark:hover:text-indigo-300 ${newProduct.images.length >= 3 ? 'pointer-events-none' : ''}`}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                          {newProduct.images.map((image, index) => (
+                            <div key={index} className="relative group">
+                              <img 
+                                src={URL.createObjectURL(image)}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                                />
+                                <button
+                                  type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
-                                  <span>Upload files</span>
-                                  <input
-                                    id="product-images"
-                                    name="product-images"
-                                    type="file"
-                                    className="sr-only"
-                                    onChange={handleImageUpload}
-                                    multiple
-                                    disabled={newProduct.images.length >= 3}
-                                  />
-                                </label>
-                                <p className="sm:pl-1 mt-1 sm:mt-0">or drag and drop</p>
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                PNG, JPG, GIF up to 10MB
-                              </p>
-                              {newProduct.images.length > 0 && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                  {3 - newProduct.images.length} more can be uploaded
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                                <X className="w-4 h-4" />
+                                </button>
+                                </div>
+                          ))}
+                          {newProduct.images.length < 4 && (
+                            <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
+                              <label className="cursor-pointer text-center p-4">
+                                <ImageIcon className="w-8 h-8 mx-auto text-gray-400" />
+                                <span className="mt-2 text-sm text-gray-500 dark:text-gray-400">Add Image</span>
+                                    <input
+                                      type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={handleImageUpload}
+                                  multiple
+                                    />
+                                  </label>
+                                </div>
+                            )}
                         </div>
                       </div>
 
+                      {/* Product Name */}
                       <div className="col-span-2 md:col-span-1">
                         <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Name
+                          Product Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           id="product-name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          placeholder="e.g., Premium Cotton T-Shirt"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.name}
-                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                          onChange={(e) => {
+                            const name = e.target.value;
+                            setNewProduct(prev => ({
+                              ...prev,
+                              name,
+                              sku: prev.sku || generateSKU(prev.category)
+                            }));
+                          }}
                           required
                         />
                       </div>
 
+                      {/* SKU */}
                       <div className="col-span-2 md:col-span-1">
                         <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          SKU
+                          SKU <span className="text-red-500">*</span>
                         </label>
+                        <div className="relative">
                         <input
                           type="text"
                           id="product-sku"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            placeholder="Auto-generated SKU"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.sku}
                           onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
                           required
                         />
+                          <button
+                            type="button"
+                            onClick={() => setNewProduct(prev => ({
+                              ...prev,
+                              sku: generateSKU(prev.category)
+                            }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
 
+                      {/* Category */}
                       <div className="col-span-2 md:col-span-1">
                         <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Category
+                          Category <span className="text-red-500">*</span>
                         </label>
                         <select
                           id="product-category"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.category}
-                          onChange={(e) => handleCategoryChange(e.target.value)}
+                          onChange={(e) => {
+                            const category = e.target.value;
+                            setNewProduct(prev => ({
+                              ...prev,
+                              category,
+                              sku: generateSKU(category)
+                            }));
+                          }}
                           required
                         >
                           <option value="">Select a category</option>
@@ -978,28 +864,10 @@ const ProductsPage = () => {
                         </select>
                       </div>
 
-                      <div className="col-span-2 md:col-span-1">
-                        <label htmlFor="product-subcategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Subcategory
-                        </label>
-                        <select
-                          id="product-subcategory"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.subCategory}
-                          onChange={(e) => setNewProduct({...newProduct, subCategory: e.target.value})}
-                          required
-                          disabled={!newProduct.category}
-                        >
-                          <option value="">Select a subcategory</option>
-                          {newProduct.category && categories.find(c => c.name === newProduct.category)?.subCategories.map((subCategory) => (
-                            <option key={subCategory} value={subCategory}>{subCategory}</option>
-                          ))}
-                        </select>
-                      </div>
-
+                      {/* Price */}
                       <div className="col-span-2 md:col-span-1">
                         <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Price
+                          Price <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1010,7 +878,8 @@ const ProductsPage = () => {
                             id="product-price"
                             min="0"
                             step="0.01"
-                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            placeholder="0.00"
+                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                             value={newProduct.price}
                             onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
                             required
@@ -1018,14 +887,16 @@ const ProductsPage = () => {
                         </div>
                       </div>
 
+                      {/* Stock */}
                       <div className="col-span-2 md:col-span-1">
                         <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Stock Quantity
+                          Stock Quantity <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
                           id="product-stock"
                           min="0"
+                          placeholder="Available quantity"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.stock}
                           onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
@@ -1033,6 +904,7 @@ const ProductsPage = () => {
                         />
                       </div>
 
+                      {/* Description */}
                       <div className="col-span-2">
                         <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Description
@@ -1040,12 +912,15 @@ const ProductsPage = () => {
                         <textarea
                           id="product-description"
                           rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          placeholder="Detailed description of the product..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.description}
                           onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                         />
                       </div>
                     </div>
+
+                    {/* Form Actions */}
                     <div className="flex justify-end space-x-3">
                       <button
                         type="button"
@@ -1082,7 +957,7 @@ const ProductsPage = () => {
                     </button>
                   </div>
                   <form onSubmit={handleAddCategory}>
-                    <div className="mb-4">
+                    <div className="mb-6">
                       <label htmlFor="category-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Category Name
                       </label>
@@ -1090,52 +965,11 @@ const ProductsPage = () => {
                         type="text"
                         id="category-name"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                        value={newCategory.name}
-                        onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
                         required
                       />
                     </div>
-                    
-                    <div className="mb-4">
-                      <label htmlFor="subcategory-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Subcategories
-                      </label>
-                      <div className="flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          id="subcategory-name"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newSubCategory}
-                          onChange={(e) => setNewSubCategory(e.target.value)}
-                          placeholder="Add subcategory"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddSubCategory}
-                          className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
-                        >
-                          Add
-                        </button>
-                      </div>
-                      
-                      {newCategory.subCategories.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {newCategory.subCategories.map((subCat) => (
-                            <div key={subCat} className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1">
-                              <span className="text-sm text-gray-800 dark:text-gray-200">{subCat}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveSubCategory(subCat)}
-                                className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
                     <div className="flex justify-end space-x-3">
                       <button
                         type="button"

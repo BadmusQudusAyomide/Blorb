@@ -1,5 +1,6 @@
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
+import { useAuth } from '../context/AuthContext';
 import { 
   ShoppingCart, 
   Package, 
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const SellerDashboard = () => {
+  const { seller } = useAuth();
   const stats = [
     { title: "Total Orders", value: "1,245", change: "+12%", icon: <ShoppingCart className="w-6 h-6 text-indigo-600" /> },
     { title: "Products", value: "342", change: "+5%", icon: <Package className="w-6 h-6 text-blue-600" /> },
@@ -25,7 +27,9 @@ const SellerDashboard = () => {
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Welcome back, Ayomide!</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+              Welcome back, {seller?.name || 'Seller'}!
+            </h2>
             <p className="text-gray-600 dark:text-gray-400">Here's what's happening with your store today.</p>
           </div>
           

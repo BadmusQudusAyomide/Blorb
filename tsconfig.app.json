@@ -7,7 +7,7 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "jsxImportSource": "react",
-    "types": ["react", "react-dom"],
+    "types": ["react", "react-dom", "node"],
     "jsx": "react-jsx",
 
     /* Bundler mode */
@@ -21,7 +21,6 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
