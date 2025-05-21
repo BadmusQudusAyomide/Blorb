@@ -45,11 +45,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const fetchSellerData = async () => {
       if (user) {
-        const sellerRef = doc(db, 'sellers', user.uid);
-        const sellerDoc = await getDoc(sellerRef);
-        
-        if (sellerDoc.exists()) {
-          setSeller({ ...sellerDoc.data() as Seller, id: sellerDoc.id });
+        try {
+          const sellerRef = doc(db, 'sellers', user.uid);
+          const sellerDoc = await getDoc(sellerRef);
+          
+          if (sellerDoc.exists()) {
+            setSeller({ ...sellerDoc.data() as Seller, id: sellerDoc.id });
+          } else {
+            // Create seller document if it doesn't exist
+            const sellerData: Omit<Seller, 'id'> = {
+              name: user.displayName || user.email?.split('@')[0] || 'Seller',
+              email: user.email || '',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+            await setDoc(sellerRef, sellerData);
+            setSeller({ ...sellerData, id: user.uid });
+          }
+        } catch (err) {
+          console.error('Error fetching seller data:', err);
+          setError('Failed to fetch seller data');
         }
       } else {
         setSeller(null);

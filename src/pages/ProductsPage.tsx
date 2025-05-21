@@ -39,7 +39,7 @@ interface Product {
   discountPrice?: number;
   stock: number;
   category: string;
-  images: string[];
+  images: (string | File)[];
   sku: string;
   brandName: string;
   tags?: string[];
@@ -79,19 +79,43 @@ const ProductsPage = () => {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [newProduct, setNewProduct] = useState({
+  const [newProduct, setNewProduct] = useState<{
+    name: string;
+    description: string;
+    price: string;
+    discountPrice: string;
+    stock: string;
+    category: string;
+    images: (string | File)[];
+    sku: string;
+    brandName: string;
+    tags: string;
+    colors: string[];
+    sizes: string[];
+    weight: {
+      value: string;
+      unit: string;
+    };
+    dimensions: {
+      length: string;
+      width: string;
+      height: string;
+      unit: string;
+    };
+    returnPolicy: string;
+  }>({
     name: '',
     description: '',
     price: '',
     discountPrice: '',
     stock: '',
     category: '',
-    images: [] as File[],
+    images: [],
     sku: '',
     brandName: '',
     tags: '',
-    colors: [] as string[],
-    sizes: [] as string[],
+    colors: [],
+    sizes: [],
     weight: {
       value: '',
       unit: 'kg'
@@ -148,9 +172,9 @@ const ProductsPage = () => {
 
     // Set active tab based on URL
     const pathParts = location.pathname.split('/');
-    if (pathParts.length > 2 && pathParts[2]) {
-      setActiveTab(pathParts[2]);
-    } else {
+  if (pathParts.length > 2 && pathParts[2]) {
+    setActiveTab(pathParts[2]);
+  } else {
       setActiveTab('all');
     }
 
@@ -204,32 +228,45 @@ const ProductsPage = () => {
     try {
       // Upload images to Cloudinary first
       const imageUrls = await Promise.all(
-        newProduct.images.map(image => uploadImage(image))
+        newProduct.images.map(async (image) => {
+          if (typeof image === 'string') {
+            return image; // Return existing URL
+          }
+          return uploadImage(image); // Upload new File
+        })
       );
       
       // Add to Firestore
-      const productsRef = collection(db, 'products');
-      await addDoc(productsRef, {
+      const productData = {
         name: newProduct.name,
-        price: parseFloat(newProduct.price),
-        category: newProduct.category,
-        stock: parseInt(newProduct.stock),
-        images: imageUrls,
         description: newProduct.description,
-        sku: newProduct.sku,
+        price: parseFloat(newProduct.price),
+        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : null,
+        stock: parseInt(newProduct.stock),
+        category: newProduct.category,
+        images: imageUrls,
+        sku: newProduct.sku || generateSKU(newProduct.category),
+        brandName: newProduct.brandName,
+        tags: newProduct.tags ? newProduct.tags.split(',').map(tag => tag.trim()) : [],
+        colors: newProduct.colors,
+        sizes: newProduct.sizes,
+        weight: newProduct.weight.value ? {
+          value: parseFloat(newProduct.weight.value),
+          unit: newProduct.weight.unit
+        } : null,
+        dimensions: newProduct.dimensions.length ? {
+          length: parseFloat(newProduct.dimensions.length),
+          width: parseFloat(newProduct.dimensions.width),
+          height: parseFloat(newProduct.dimensions.height),
+          unit: newProduct.dimensions.unit
+        } : null,
+        returnPolicy: newProduct.returnPolicy || null,
         sellerId: user.uid,
         createdAt: new Date(),
         updatedAt: new Date()
-      });
-      
-      // Update category count
-      const updatedCategories = categories.map(cat => 
-        cat.name === newProduct.category 
-          ? { ...cat, productCount: (cat.productCount || 0) + 1 } 
-          : cat
-      );
-      setCategories(updatedCategories);
-      
+      };
+
+      await addDoc(collection(db, 'products'), productData);
       setShowAddProductModal(false);
       setNewProduct({
         name: '',
@@ -258,7 +295,6 @@ const ProductsPage = () => {
       });
     } catch (error) {
       console.error('Error adding product:', error);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -287,69 +323,57 @@ const ProductsPage = () => {
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.uid || !editingProduct) {
-      console.error('No user logged in or no product selected');
-      return;
-    }
+    if (!editingProduct) return;
 
     try {
-      const productRef = doc(db, 'products', editingProduct.id);
-      
       // Upload new images if any
-      let imageUrls = editingProduct.images;
-      if (newProduct.images.length > 0) {
-        imageUrls = await Promise.all(
-          newProduct.images.map(image => uploadImage(image))
-        );
-      }
+      const newImageUrls = await Promise.all(
+        editingProduct.images
+          .filter((img): img is File => {
+            if (typeof img === 'string') return false;
+            return img instanceof File;
+          })
+          .map(img => uploadImage(img))
+      );
 
-      // Update the product in Firestore
+      // Keep existing image URLs
+      const existingImageUrls = editingProduct.images
+        .filter((img): img is string => typeof img === 'string');
+
+      // Combine all image URLs
+      const allImageUrls = [...existingImageUrls, ...newImageUrls];
+
+      // Update in Firestore
+      const productRef = doc(db, 'products', editingProduct.id);
       await updateDoc(productRef, {
-        name: newProduct.name,
-        description: newProduct.description,
-        price: parseFloat(newProduct.price),
-        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : null,
-        stock: parseInt(newProduct.stock),
-        category: newProduct.category,
-        images: imageUrls,
-        sku: newProduct.sku,
-        brandName: newProduct.brandName,
-        tags: newProduct.tags ? newProduct.tags.split(',').map(tag => tag.trim()) : [],
-        colors: newProduct.colors,
-        sizes: newProduct.sizes,
-        weight: newProduct.weight,
-        dimensions: newProduct.dimensions,
-        returnPolicy: newProduct.returnPolicy,
+        name: editingProduct.name,
+        price: editingProduct.price.toString(),
+        discountPrice: editingProduct.discountPrice ? editingProduct.discountPrice.toString() : null,
+        category: editingProduct.category,
+        stock: editingProduct.stock.toString(),
+        images: allImageUrls,
+        description: editingProduct.description,
+        sku: editingProduct.sku,
+        brandName: editingProduct.brandName,
+        tags: Array.isArray(editingProduct.tags) ? editingProduct.tags : [],
+        colors: editingProduct.colors || [],
+        sizes: editingProduct.sizes || [],
+        weight: editingProduct.weight ? {
+          value: editingProduct.weight.value ? editingProduct.weight.value.toString() : null,
+          unit: editingProduct.weight.unit
+        } : null,
+        dimensions: editingProduct.dimensions ? {
+          length: editingProduct.dimensions.length ? editingProduct.dimensions.length.toString() : null,
+          width: editingProduct.dimensions.width ? editingProduct.dimensions.width.toString() : null,
+          height: editingProduct.dimensions.height ? editingProduct.dimensions.height.toString() : null,
+          unit: editingProduct.dimensions.unit
+        } : null,
+        returnPolicy: editingProduct.returnPolicy || null,
         updatedAt: new Date()
       });
 
       setShowEditModal(false);
       setEditingProduct(null);
-      setNewProduct({
-        name: '',
-        description: '',
-        price: '',
-        discountPrice: '',
-        stock: '',
-        category: '',
-        images: [],
-        sku: '',
-        brandName: '',
-        tags: '',
-        colors: [],
-        sizes: [],
-        weight: {
-          value: '',
-          unit: 'kg'
-        },
-        dimensions: {
-          length: '',
-          width: '',
-          height: '',
-          unit: 'cm'
-        },
-        returnPolicy: ''
-      });
     } catch (error) {
       console.error('Error updating product:', error);
       // You might want to show an error message to the user here
@@ -360,28 +384,28 @@ const ProductsPage = () => {
   const startEdit = (product: Product) => {
     setEditingProduct(product);
     setNewProduct({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price?.toString() || '0',
       discountPrice: product.discountPrice?.toString() || '',
-      stock: product.stock.toString(),
-      category: product.category,
-      images: [],
-      sku: product.sku,
-      brandName: product.brandName,
+      stock: product.stock?.toString() || '0',
+      category: product.category || '',
+      images: product.images || [],
+      sku: product.sku || '',
+      brandName: product.brandName || '',
       tags: product.tags?.join(', ') || '',
       colors: product.colors || [],
       sizes: product.sizes || [],
       weight: product.weight ? {
-        value: product.weight.value.toString(),
-        unit: product.weight.unit
-      } : { value: '', unit: 'kg' },
+        value: product.weight.value?.toString() || '0',
+        unit: product.weight.unit || 'kg'
+      } : { value: '0', unit: 'kg' },
       dimensions: product.dimensions ? {
-        length: product.dimensions.length.toString(),
-        width: product.dimensions.width.toString(),
-        height: product.dimensions.height.toString(),
-        unit: product.dimensions.unit
-      } : { length: '', width: '', height: '', unit: 'cm' },
+        length: product.dimensions.length?.toString() || '0',
+        width: product.dimensions.width?.toString() || '0',
+        height: product.dimensions.height?.toString() || '0',
+        unit: product.dimensions.unit || 'cm'
+      } : { length: '0', width: '0', height: '0', unit: 'cm' },
       returnPolicy: product.returnPolicy || ''
     });
     setShowEditModal(true);
@@ -467,6 +491,11 @@ const ProductsPage = () => {
 
   // Get unique categories for filter
   const uniqueCategories = ['all', ...new Set(products.map(p => p.category))];
+
+  const formatPrice = (price: number | string): string => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return numPrice.toFixed(2);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
@@ -679,17 +708,17 @@ const ProductsPage = () => {
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-3">
                               <div className="flex-shrink-0">
-                                {product.images.length > 0 ? (
-                                  <img 
+                                {product.images.length > 0 && typeof product.images[0] === 'string' ? (
+                                <img 
                                     src={product.images[0]} 
-                                    alt={product.name} 
+                                  alt={product.name} 
                                     className="w-12 h-12 rounded-md object-cover"
-                                  />
-                                ) : (
+                                />
+                              ) : (
                                   <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                     <ImageIcon className="w-6 h-6 text-gray-400" />
-                                  </div>
-                                )}
+                                </div>
+                              )}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -704,8 +733,8 @@ const ProductsPage = () => {
                           <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 text-sm">
                             {product.category}
                           </td>
-                          <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-gray-900 dark:text-white text-sm">
-                            ${product.price.toFixed(2)}
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                            ${formatPrice(product.price)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -792,17 +821,17 @@ const ProductsPage = () => {
                         <td className="px-4 py-4">
                           <div className="flex items-center space-x-3">
                             <div className="flex-shrink-0">
-                              {product.images.length > 0 ? (
+                              {product.images.length > 0 && typeof product.images[0] === 'string' ? (
                                 <img 
                                   src={product.images[0]} 
-                                  alt={product.name} 
+                                alt={product.name} 
                                   className="w-12 h-12 rounded-md object-cover"
-                                />
-                              ) : (
+                              />
+                            ) : (
                                 <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                   <ImageIcon className="w-6 h-6 text-gray-400" />
-                                </div>
-                              )}
+                              </div>
+                            )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -929,7 +958,7 @@ const ProductsPage = () => {
                           onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
                           required
                         />
-                      </div>
+                                </div>
 
                       {/* Product Description */}
                       <div className="col-span-2">
@@ -951,11 +980,11 @@ const ProductsPage = () => {
                       <div className="col-span-1">
                         <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Regular Price <span className="text-red-500">*</span>
-                        </label>
+                                  </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span className="text-gray-500 sm:text-sm">$</span>
-                          </div>
+                                </div>
                           <input
                             type="number"
                             id="product-price"
@@ -978,7 +1007,7 @@ const ProductsPage = () => {
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span className="text-gray-500 sm:text-sm">$</span>
                           </div>
-                          <input
+                        <input
                             type="number"
                             id="product-discount-price"
                             min="0"
@@ -1060,7 +1089,7 @@ const ProductsPage = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                           </button>
-                        </div>
+                          </div>
                       </div>
 
                       <div className="col-span-1">
@@ -1087,7 +1116,7 @@ const ProductsPage = () => {
                           {newProduct.images.map((image, index) => (
                             <div key={index} className="relative group">
                               <img 
-                                src={URL.createObjectURL(image)}
+                                src={typeof image === 'string' ? image : URL.createObjectURL(image)}
                                 alt={`Preview ${index + 1}`}
                                 className="w-full h-32 object-cover rounded-lg"
                               />
@@ -1207,8 +1236,8 @@ const ProductsPage = () => {
                           Product Dimensions
                         </label>
                         <div className="grid grid-cols-4 gap-2">
-                          <input
-                            type="number"
+                        <input
+                          type="number"
                             placeholder="L"
                             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                             value={newProduct.dimensions.length}
@@ -1536,7 +1565,7 @@ const ProductsPage = () => {
                           {newProduct.images.map((image, index) => (
                             <div key={index} className="relative group">
                               <img 
-                                src={URL.createObjectURL(image)}
+                                src={typeof image === 'string' ? image : URL.createObjectURL(image)}
                                 alt={`Preview ${index + 1}`}
                                 className="w-full h-32 object-cover rounded-lg"
                               />
