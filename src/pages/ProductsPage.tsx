@@ -22,7 +22,8 @@ import {
   onSnapshot, 
   query, 
   orderBy,
-  where 
+  where,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase.config';
 import Sidebar from '../components/dashboard/Sidebar';
@@ -33,12 +34,28 @@ import { useAuth } from '../context/AuthContext';
 interface Product {
   id: string;
   name: string;
-  price: number;
-  category: string;
-  stock: number;
-  images: string[];
   description: string;
+  price: number;
+  discountPrice?: number;
+  stock: number;
+  category: string;
+  images: string[];
   sku: string;
+  brandName: string;
+  tags?: string[];
+  colors?: string[];
+  sizes?: string[];
+  weight?: {
+    value: number;
+    unit: string;
+  };
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+    unit: string;
+  };
+  returnPolicy?: string;
   sellerId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -64,18 +81,36 @@ const ProductsPage = () => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
-    price: '',
-    category: '',
-    stock: '',
     description: '',
+    price: '',
+    discountPrice: '',
+    stock: '',
+    category: '',
+    images: [] as File[],
     sku: '',
-    images: [] as File[]
+    brandName: '',
+    tags: '',
+    colors: [] as string[],
+    sizes: [] as string[],
+    weight: {
+      value: '',
+      unit: 'kg'
+    },
+    dimensions: {
+      length: '',
+      width: '',
+      height: '',
+      unit: 'cm'
+    },
+    returnPolicy: ''
   });
   const [newCategory, setNewCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [selectedStockFilter, setSelectedStockFilter] = useState<string>('all');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Load products on component mount
   useEffect(() => {
@@ -198,12 +233,28 @@ const ProductsPage = () => {
       setShowAddProductModal(false);
       setNewProduct({
         name: '',
-        price: '',
-        category: '',
-        stock: '',
         description: '',
+        price: '',
+        discountPrice: '',
+        stock: '',
+        category: '',
+        images: [],
         sku: '',
-        images: []
+        brandName: '',
+        tags: '',
+        colors: [],
+        sizes: [],
+        weight: {
+          value: '',
+          unit: 'kg'
+        },
+        dimensions: {
+          length: '',
+          width: '',
+          height: '',
+          unit: 'cm'
+        },
+        returnPolicy: ''
       });
     } catch (error) {
       console.error('Error adding product:', error);
@@ -232,16 +283,125 @@ const ProductsPage = () => {
     }
   };
 
+  // Handle editing a product
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user?.uid || !editingProduct) {
+      console.error('No user logged in or no product selected');
+      return;
+    }
+
+    try {
+      const productRef = doc(db, 'products', editingProduct.id);
+      
+      // Upload new images if any
+      let imageUrls = editingProduct.images;
+      if (newProduct.images.length > 0) {
+        imageUrls = await Promise.all(
+          newProduct.images.map(image => uploadImage(image))
+        );
+      }
+
+      // Update the product in Firestore
+      await updateDoc(productRef, {
+        name: newProduct.name,
+        description: newProduct.description,
+        price: parseFloat(newProduct.price),
+        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : null,
+        stock: parseInt(newProduct.stock),
+        category: newProduct.category,
+        images: imageUrls,
+        sku: newProduct.sku,
+        brandName: newProduct.brandName,
+        tags: newProduct.tags ? newProduct.tags.split(',').map(tag => tag.trim()) : [],
+        colors: newProduct.colors,
+        sizes: newProduct.sizes,
+        weight: newProduct.weight,
+        dimensions: newProduct.dimensions,
+        returnPolicy: newProduct.returnPolicy,
+        updatedAt: new Date()
+      });
+
+      setShowEditModal(false);
+      setEditingProduct(null);
+      setNewProduct({
+        name: '',
+        description: '',
+        price: '',
+        discountPrice: '',
+        stock: '',
+        category: '',
+        images: [],
+        sku: '',
+        brandName: '',
+        tags: '',
+        colors: [],
+        sizes: [],
+        weight: {
+          value: '',
+          unit: 'kg'
+        },
+        dimensions: {
+          length: '',
+          width: '',
+          height: '',
+          unit: 'cm'
+        },
+        returnPolicy: ''
+      });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  // Handle starting edit mode
+  const startEdit = (product: Product) => {
+    setEditingProduct(product);
+    setNewProduct({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      discountPrice: product.discountPrice?.toString() || '',
+      stock: product.stock.toString(),
+      category: product.category,
+      images: [],
+      sku: product.sku,
+      brandName: product.brandName,
+      tags: product.tags?.join(', ') || '',
+      colors: product.colors || [],
+      sizes: product.sizes || [],
+      weight: product.weight ? {
+        value: product.weight.value.toString(),
+        unit: product.weight.unit
+      } : { value: '', unit: 'kg' },
+      dimensions: product.dimensions ? {
+        length: product.dimensions.length.toString(),
+        width: product.dimensions.width.toString(),
+        height: product.dimensions.height.toString(),
+        unit: product.dimensions.unit
+      } : { length: '', width: '', height: '', unit: 'cm' },
+      returnPolicy: product.returnPolicy || ''
+    });
+    setShowEditModal(true);
+  };
+
   // Handle deleting a product
   const handleDeleteProduct = async (productId: string) => {
-    try {
-      const productRef = doc(db, 'products', productId);
-      await deleteDoc(productRef);
-      
-      // Category count will update automatically through the listener
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      // You might want to show an error message to the user here
+    if (!user?.uid) {
+      console.error('No user logged in');
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        const productRef = doc(db, 'products', productId);
+        await deleteDoc(productRef);
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        // You might want to show an error message to the user here
+      }
     }
   };
 
@@ -517,26 +677,27 @@ const ProductsPage = () => {
                       filteredProducts.map((product) => (
                         <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                           <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              {product.images.length > 0 ? (
-                                <div className="flex space-x-4">
-                                  {product.images.slice(0, 3).map((image, index) => (
-                                <img 
-                                      key={index}
-                                      src={image} 
-                                  alt={product.name} 
-                                      className="w-10 h-10 rounded-md object-cover"
-                                />
-                                  ))}
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                {product.images.length > 0 ? (
+                                  <img 
+                                    src={product.images[0]} 
+                                    alt={product.name} 
+                                    className="w-12 h-12 rounded-md object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {product.name}
                                 </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
-                                  <ImageIcon className="w-5 h-5 text-gray-400" />
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {product.sku}
                                 </div>
-                              )}
-                              <div>
-                                <div className="font-medium text-gray-900 dark:text-white">{product.name}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{product.sku}</div>
                               </div>
                             </div>
                           </td>
@@ -557,7 +718,10 @@ const ProductsPage = () => {
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end items-center space-x-2">
-                              <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                              <button 
+                                onClick={() => startEdit(product)}
+                                className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                              >
                                 <Edit className="w-4 h-4 md:w-5 md:h-5" />
                               </button>
                               <button 
@@ -625,28 +789,29 @@ const ProductsPage = () => {
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                     {filteredProducts.map((product) => (
                       <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {product.images.length > 0 ? (
-                              <div className="flex space-x-4">
-                                {product.images.slice(0, 3).map((image, index) => (
-                              <img 
-                                    key={index}
-                                    src={image} 
-                                alt={product.name} 
-                                    className="w-10 h-10 rounded-md object-cover"
-                              />
-                                ))}
+                        <td className="px-4 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {product.images.length > 0 ? (
+                                <img 
+                                  src={product.images[0]} 
+                                  alt={product.name} 
+                                  className="w-12 h-12 rounded-md object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                  <ImageIcon className="w-6 h-6 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {product.name}
                               </div>
-                            ) : (
-                              <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
-                                <ImageIcon className="w-5 h-5 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="font-medium text-gray-900 dark:text-white">{product.name}</div>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4">
                           <input
                             type="number"
                             min="0"
@@ -732,7 +897,7 @@ const ProductsPage = () => {
           {/* Add Product Modal */}
           {showAddProductModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <div className="p-4 md:p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-white">Add New Product</h3>
@@ -745,48 +910,13 @@ const ProductsPage = () => {
                   </div>
                   <form onSubmit={handleAddProduct}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
-                      {/* Product Images */}
+                      {/* Required Fields Section */}
                       <div className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Product Images <span className="text-xs text-gray-500">(Max 4 images)</span>
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                          {newProduct.images.map((image, index) => (
-                            <div key={index} className="relative group">
-                              <img 
-                                src={URL.createObjectURL(image)}
-                                alt={`Preview ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg"
-                                />
-                                <button
-                                  type="button"
-                                onClick={() => removeImage(index)}
-                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                <X className="w-4 h-4" />
-                                </button>
-                                </div>
-                          ))}
-                          {newProduct.images.length < 4 && (
-                            <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
-                              <label className="cursor-pointer text-center p-4">
-                                <ImageIcon className="w-8 h-8 mx-auto text-gray-400" />
-                                <span className="mt-2 text-sm text-gray-500 dark:text-gray-400">Add Image</span>
-                                    <input
-                                      type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={handleImageUpload}
-                                  multiple
-                                    />
-                                  </label>
-                                </div>
-                            )}
-                        </div>
+                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Required Information</h4>
                       </div>
 
                       {/* Product Name */}
-                      <div className="col-span-2 md:col-span-1">
+                      <div className="col-span-2">
                         <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Product Name <span className="text-red-500">*</span>
                         </label>
@@ -796,50 +926,89 @@ const ProductsPage = () => {
                           placeholder="e.g., Premium Cotton T-Shirt"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.name}
-                          onChange={(e) => {
-                            const name = e.target.value;
-                            setNewProduct(prev => ({
-                              ...prev,
-                              name,
-                              sku: prev.sku || generateSKU(prev.category)
-                            }));
-                          }}
+                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
                           required
                         />
                       </div>
 
-                      {/* SKU */}
-                      <div className="col-span-2 md:col-span-1">
-                        <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          SKU <span className="text-red-500">*</span>
+                      {/* Product Description */}
+                      <div className="col-span-2">
+                        <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Description <span className="text-red-500">*</span>
                         </label>
-                        <div className="relative">
-                        <input
-                          type="text"
-                          id="product-sku"
-                            placeholder="Auto-generated SKU"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.sku}
-                          onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
+                        <textarea
+                          id="product-description"
+                          rows={4}
+                          placeholder="Detailed description of the product..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.description}
+                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                           required
                         />
-                          <button
-                            type="button"
-                            onClick={() => setNewProduct(prev => ({
-                              ...prev,
-                              sku: generateSKU(prev.category)
-                            }))}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </button>
+                      </div>
+
+                      {/* Price and Discount Price */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Regular Price <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">$</span>
+                          </div>
+                          <input
+                            type="number"
+                            id="product-price"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.price}
+                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                            required
+                          />
                         </div>
                       </div>
 
-                      {/* Category */}
-                      <div className="col-span-2 md:col-span-1">
+                      <div className="col-span-1">
+                        <label htmlFor="product-discount-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Discount Price
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">$</span>
+                          </div>
+                          <input
+                            type="number"
+                            id="product-discount-price"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.discountPrice}
+                            onChange={(e) => setNewProduct({...newProduct, discountPrice: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Stock and Category */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Stock Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          id="product-stock"
+                          min="0"
+                          placeholder="Available quantity"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.stock}
+                          onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      <div className="col-span-1">
                         <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Category <span className="text-red-500">*</span>
                         </label>
@@ -864,58 +1033,238 @@ const ProductsPage = () => {
                         </select>
                       </div>
 
-                      {/* Price */}
-                      <div className="col-span-2 md:col-span-1">
-                        <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Price <span className="text-red-500">*</span>
+                      {/* SKU and Brand Name */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          SKU <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">$</span>
-                          </div>
                           <input
-                            type="number"
-                            id="product-price"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                            value={newProduct.price}
-                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                            type="text"
+                            id="product-sku"
+                            placeholder="Auto-generated SKU"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.sku}
+                            onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
                             required
                           />
+                          <button
+                            type="button"
+                            onClick={() => setNewProduct(prev => ({
+                              ...prev,
+                              sku: generateSKU(prev.category)
+                            }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
 
-                      {/* Stock */}
-                      <div className="col-span-2 md:col-span-1">
-                        <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Stock Quantity <span className="text-red-500">*</span>
+                      <div className="col-span-1">
+                        <label htmlFor="product-brand" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Brand Name <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="number"
-                          id="product-stock"
-                          min="0"
-                          placeholder="Available quantity"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.stock}
-                          onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                          type="text"
+                          id="product-brand"
+                          placeholder="Enter brand name"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.brandName}
+                          onChange={(e) => setNewProduct({...newProduct, brandName: e.target.value})}
                           required
                         />
                       </div>
 
-                      {/* Description */}
+                      {/* Product Images */}
                       <div className="col-span-2">
-                        <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Description
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Product Images <span className="text-red-500">*</span> <span className="text-xs text-gray-500">(Max 4 images)</span>
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                          {newProduct.images.map((image, index) => (
+                            <div key={index} className="relative group">
+                              <img 
+                                src={URL.createObjectURL(image)}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                          {newProduct.images.length < 4 && (
+                            <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
+                              <label className="cursor-pointer text-center p-4">
+                                <ImageIcon className="w-8 h-8 mx-auto text-gray-400" />
+                                <span className="mt-2 text-sm text-gray-500 dark:text-gray-400">Add Image</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={handleImageUpload}
+                                  multiple
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Optional Fields Section */}
+                      <div className="col-span-2">
+                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Additional Information (Optional)</h4>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="col-span-2">
+                        <label htmlFor="product-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Tags
+                        </label>
+                        <input
+                          type="text"
+                          id="product-tags"
+                          placeholder="Enter tags separated by commas"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.tags}
+                          onChange={(e) => setNewProduct({...newProduct, tags: e.target.value})}
+                        />
+                      </div>
+
+                      {/* Colors and Sizes */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-colors" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Available Colors
+                        </label>
+                        <input
+                          type="text"
+                          id="product-colors"
+                          placeholder="Enter colors separated by commas"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.colors.join(', ')}
+                          onChange={(e) => setNewProduct({...newProduct, colors: e.target.value.split(',').map(c => c.trim())})}
+                        />
+                      </div>
+
+                      <div className="col-span-1">
+                        <label htmlFor="product-sizes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Available Sizes
+                        </label>
+                        <input
+                          type="text"
+                          id="product-sizes"
+                          placeholder="Enter sizes separated by commas"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.sizes.join(', ')}
+                          onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value.split(',').map(s => s.trim())})}
+                        />
+                      </div>
+
+                      {/* Weight and Dimensions */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Weight
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            id="product-weight"
+                            min="0"
+                            step="0.01"
+                            placeholder="Weight"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.weight.value}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              weight: { ...newProduct.weight, value: e.target.value }
+                            })}
+                          />
+                          <select
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.weight.unit}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              weight: { ...newProduct.weight, unit: e.target.value }
+                            })}
+                          >
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="lb">lb</option>
+                            <option value="oz">oz</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Dimensions
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <input
+                            type="number"
+                            placeholder="L"
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.length}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, length: e.target.value }
+                            })}
+                          />
+                          <input
+                            type="number"
+                            placeholder="W"
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.width}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, width: e.target.value }
+                            })}
+                          />
+                          <input
+                            type="number"
+                            placeholder="H"
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.height}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, height: e.target.value }
+                            })}
+                          />
+                          <select
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.unit}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, unit: e.target.value }
+                            })}
+                          >
+                            <option value="cm">cm</option>
+                            <option value="m">m</option>
+                            <option value="in">in</option>
+                            <option value="ft">ft</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Return Policy */}
+                      <div className="col-span-2">
+                        <label htmlFor="return-policy" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Return Policy
                         </label>
                         <textarea
-                          id="product-description"
+                          id="return-policy"
                           rows={3}
-                          placeholder="Detailed description of the product..."
+                          placeholder="Enter your return policy details..."
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.description}
-                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                          value={newProduct.returnPolicy}
+                          onChange={(e) => setNewProduct({...newProduct, returnPolicy: e.target.value})}
                         />
                       </div>
                     </div>
@@ -983,6 +1332,409 @@ const ProductsPage = () => {
                         className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                       >
                         Add Category
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Modal */}
+          {showEditModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="p-4 md:p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white">Edit Product</h3>
+                    <button 
+                      onClick={() => {
+                        setShowEditModal(false);
+                        setEditingProduct(null);
+                      }}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  <form onSubmit={handleEditProduct}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+                      {/* Required Fields Section */}
+                      <div className="col-span-2">
+                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Required Information</h4>
+                      </div>
+
+                      {/* Product Name */}
+                      <div className="col-span-2">
+                        <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="product-name"
+                          placeholder="e.g., Premium Cotton T-Shirt"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.name}
+                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      {/* Product Description */}
+                      <div className="col-span-2">
+                        <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Description <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          id="product-description"
+                          rows={4}
+                          placeholder="Detailed description of the product..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.description}
+                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      {/* Price and Discount Price */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Regular Price <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">$</span>
+                          </div>
+                          <input
+                            type="number"
+                            id="product-price"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.price}
+                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="col-span-1">
+                        <label htmlFor="product-discount-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Discount Price
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">$</span>
+                          </div>
+                          <input
+                            type="number"
+                            id="product-discount-price"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.discountPrice}
+                            onChange={(e) => setNewProduct({...newProduct, discountPrice: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Stock and Category */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Stock Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          id="product-stock"
+                          min="0"
+                          placeholder="Available quantity"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.stock}
+                          onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      <div className="col-span-1">
+                        <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Category <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          id="product-category"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.category}
+                          onChange={(e) => {
+                            const category = e.target.value;
+                            setNewProduct(prev => ({
+                              ...prev,
+                              category,
+                              sku: generateSKU(category)
+                            }));
+                          }}
+                          required
+                        >
+                          <option value="">Select a category</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.name}>{category.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* SKU and Brand Name */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          SKU <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            id="product-sku"
+                            placeholder="Auto-generated SKU"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.sku}
+                            onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewProduct(prev => ({
+                              ...prev,
+                              sku: generateSKU(prev.category)
+                            }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="col-span-1">
+                        <label htmlFor="product-brand" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Brand Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="product-brand"
+                          placeholder="Enter brand name"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.brandName}
+                          onChange={(e) => setNewProduct({...newProduct, brandName: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      {/* Product Images */}
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Product Images <span className="text-red-500">*</span> <span className="text-xs text-gray-500">(Max 4 images)</span>
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                          {newProduct.images.map((image, index) => (
+                            <div key={index} className="relative group">
+                              <img 
+                                src={URL.createObjectURL(image)}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                          {newProduct.images.length < 4 && (
+                            <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
+                              <label className="cursor-pointer text-center p-4">
+                                <ImageIcon className="w-8 h-8 mx-auto text-gray-400" />
+                                <span className="mt-2 text-sm text-gray-500 dark:text-gray-400">Add Image</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={handleImageUpload}
+                                  multiple
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Optional Fields Section */}
+                      <div className="col-span-2">
+                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Additional Information (Optional)</h4>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="col-span-2">
+                        <label htmlFor="product-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Tags
+                        </label>
+                        <input
+                          type="text"
+                          id="product-tags"
+                          placeholder="Enter tags separated by commas"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.tags}
+                          onChange={(e) => setNewProduct({...newProduct, tags: e.target.value})}
+                        />
+                      </div>
+
+                      {/* Colors and Sizes */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-colors" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Available Colors
+                        </label>
+                        <input
+                          type="text"
+                          id="product-colors"
+                          placeholder="Enter colors separated by commas"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.colors.join(', ')}
+                          onChange={(e) => setNewProduct({...newProduct, colors: e.target.value.split(',').map(c => c.trim())})}
+                        />
+                      </div>
+
+                      <div className="col-span-1">
+                        <label htmlFor="product-sizes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Available Sizes
+                        </label>
+                        <input
+                          type="text"
+                          id="product-sizes"
+                          placeholder="Enter sizes separated by commas"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.sizes.join(', ')}
+                          onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value.split(',').map(s => s.trim())})}
+                        />
+                      </div>
+
+                      {/* Weight and Dimensions */}
+                      <div className="col-span-1">
+                        <label htmlFor="product-weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Weight
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            id="product-weight"
+                            min="0"
+                            step="0.01"
+                            placeholder="Weight"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.weight.value}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              weight: { ...newProduct.weight, value: e.target.value }
+                            })}
+                          />
+                          <select
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.weight.unit}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              weight: { ...newProduct.weight, unit: e.target.value }
+                            })}
+                          >
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="lb">lb</option>
+                            <option value="oz">oz</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Product Dimensions
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <input
+                            type="number"
+                            placeholder="L"
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.length}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, length: e.target.value }
+                            })}
+                          />
+                          <input
+                            type="number"
+                            placeholder="W"
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.width}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, width: e.target.value }
+                            })}
+                          />
+                          <input
+                            type="number"
+                            placeholder="H"
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.height}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, height: e.target.value }
+                            })}
+                          />
+                          <select
+                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            value={newProduct.dimensions.unit}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, unit: e.target.value }
+                            })}
+                          >
+                            <option value="cm">cm</option>
+                            <option value="m">m</option>
+                            <option value="in">in</option>
+                            <option value="ft">ft</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Return Policy */}
+                      <div className="col-span-2">
+                        <label htmlFor="return-policy" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Return Policy
+                        </label>
+                        <textarea
+                          id="return-policy"
+                          rows={3}
+                          placeholder="Enter your return policy details..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          value={newProduct.returnPolicy}
+                          onChange={(e) => setNewProduct({...newProduct, returnPolicy: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Form Actions */}
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEditModal(false);
+                          setEditingProduct(null);
+                        }}
+                        className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        Update Product
                       </button>
                     </div>
                   </form>
