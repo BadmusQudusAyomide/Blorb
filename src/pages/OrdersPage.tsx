@@ -1,6 +1,18 @@
 // src/pages/OrdersPage.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase.config';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot,
+  doc,
+  updateDoc,
+  Timestamp
+} from 'firebase/firestore';
 import {
   ShoppingCart,
   Clock,
@@ -20,37 +32,86 @@ import {
 import TopBar from '../components/dashboard/TopBar';
 import Sidebar from '../components/dashboard/Sidebar';
 
+interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  images: string[];
+  selectedColor?: string;
+  selectedSize?: string;
+  sellerId: string;
+}
+
+interface ShippingInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+interface Order {
+  id: string;
+  buyerId: string;
+  sellerIds: string[];
+  items: OrderItem[];
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  total: number;
+  shippingInfo: ShippingInfo;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  sellerNotes?: string;
+}
+
 const OrdersPage = () => {
   const { tab } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
 
-  // Sample orders data
-  const allOrders = [
-    { id: '1001', customer: 'John Doe', date: '2023-05-15', status: 'pending', total: 125.99, items: 3 },
-    { id: '1002', customer: 'Jane Smith', date: '2023-05-14', status: 'processing', total: 89.50, items: 2 },
-    { id: '1003', customer: 'Robert Johnson', date: '2023-05-14', status: 'completed', total: 245.75, items: 5 },
-    { id: '1004', customer: 'Emily Davis', date: '2023-05-13', status: 'cancelled', total: 65.25, items: 1 },
-    { id: '1005', customer: 'Michael Wilson', date: '2023-05-12', status: 'completed', total: 189.99, items: 4 },
-    { id: '1006', customer: 'Sarah Brown', date: '2023-05-12', status: 'processing', total: 112.40, items: 3 },
-    { id: '1007', customer: 'David Taylor', date: '2023-05-11', status: 'pending', total: 78.30, items: 2 },
-    { id: '1008', customer: 'Jessica Miller', date: '2023-05-10', status: 'completed', total: 210.00, items: 6 },
-    { id: '1009', customer: 'Thomas Anderson', date: '2023-05-09', status: 'processing', total: 95.75, items: 3 },
-    { id: '1010', customer: 'Lisa Martinez', date: '2023-05-08', status: 'completed', total: 156.60, items: 4 },
-    { id: '1011', customer: 'James White', date: '2023-05-07', status: 'pending', total: 45.99, items: 1 },
-    { id: '1012', customer: 'Patricia Harris', date: '2023-05-06', status: 'cancelled', total: 89.99, items: 2 },
-  ];
+  // Fetch orders
+  useEffect(() => {
+    if (!user) return;
+
+    const ordersRef = collection(db, 'orders');
+    const q = query(
+      ordersRef,
+      where('sellerIds', 'array-contains', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      setOrders(ordersData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching orders:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Filter orders based on tab and search query
-  const filteredOrders = allOrders.filter(order => {
+  const filteredOrders = orders.filter(order => {
     const matchesTab = !tab || tab === 'all' || order.status === tab;
     const matchesSearch = searchQuery === '' || 
       order.id.includes(searchQuery) || 
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase());
+      `${order.shippingInfo.firstName} ${order.shippingInfo.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -60,6 +121,19 @@ const OrdersPage = () => {
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
+  // Update order status
+  const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        status: newStatus,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
   const handleOrderSelect = (orderId: string) => {
     setSelectedOrders(prev =>
       prev.includes(orderId)
@@ -68,18 +142,42 @@ const OrdersPage = () => {
     );
   };
 
-  const handleBulkAction = (action: string) => {
-    console.log(`Performing ${action} on orders:`, selectedOrders);
+  const handleBulkAction = async (action: string) => {
+    try {
+      for (const orderId of selectedOrders) {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) continue;
+
+        switch (action) {
+          case 'process':
+            await updateOrderStatus(orderId, 'processing');
+            break;
+          case 'ship':
+            await updateOrderStatus(orderId, 'shipped');
+            break;
+          case 'deliver':
+            await updateOrderStatus(orderId, 'delivered');
+            break;
+          case 'cancel':
+            await updateOrderStatus(orderId, 'cancelled');
+            break;
+        }
+      }
     setSelectedOrders([]);
+    } catch (error) {
+      console.error('Error performing bulk action:', error);
+    }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: Order['status']) => {
     switch (status) {
       case 'pending':
         return <Clock className="w-4 h-4 text-yellow-500" />;
       case 'processing':
         return <Truck className="w-4 h-4 text-blue-500" />;
-      case 'completed':
+      case 'shipped':
+        return <Truck className="w-4 h-4 text-purple-500" />;
+      case 'delivered':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'cancelled':
         return <XCircle className="w-4 h-4 text-red-500" />;
@@ -88,13 +186,15 @@ const OrdersPage = () => {
     }
   };
 
-  const getStatusClass = (status: string) => {
+  const getStatusClass = (status: Order['status']) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'processing':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'completed':
+      case 'shipped':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+      case 'delivered':
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'cancelled':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
@@ -102,6 +202,28 @@ const OrdersPage = () => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Sidebar />
+        <TopBar />
+        <main className="pt-16 pl-0 lg:pl-64">
+          <div className="p-4 md:p-6">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-1/4 mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/2 mb-8"></div>
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
@@ -127,10 +249,10 @@ const OrdersPage = () => {
             </div>
           </div>
           
-          {/* Tabs - Scrollable on mobile */}
+          {/* Tabs */}
           <div className="mb-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
             <nav className="flex space-x-4 min-w-max">
-              {['all', 'pending', 'processing', 'completed', 'cancelled'].map((orderTab) => (
+              {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((orderTab) => (
                 <button
                   key={orderTab}
                   onClick={() => navigate(`/orders/${orderTab === 'all' ? '' : orderTab}`)}
@@ -140,15 +262,12 @@ const OrdersPage = () => {
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
-                  {orderTab === 'pending' && <Clock className="w-3 h-3 sm:w-4 sm:h-4" />}
-                  {orderTab === 'processing' && <Truck className="w-3 h-3 sm:w-4 sm:h-4" />}
-                  {orderTab === 'completed' && <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
-                  {orderTab === 'cancelled' && <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
+                  {getStatusIcon(orderTab as Order['status'])}
                   <span className="capitalize">{orderTab}</span>
                   <span className="ml-1 sm:ml-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-medium px-1.5 py-0.5 rounded-full">
                     {orderTab === 'all' 
-                      ? allOrders.length 
-                      : allOrders.filter(o => o.status === orderTab).length}
+                      ? orders.length 
+                      : orders.filter(o => o.status === orderTab).length}
                   </span>
                 </button>
               ))}
@@ -184,34 +303,6 @@ const OrdersPage = () => {
                     <ChevronDown className="ml-1 h-4 w-4" />
                   )}
                 </button>
-                
-                {isFilterOpen && (
-                  <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white dark:bg-gray-900 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10 border border-gray-200 dark:border-gray-700">
-                    <div className="py-1">
-                      <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
-                        Order Status
-                      </div>
-                      {['pending', 'processing', 'completed', 'cancelled'].map((status) => (
-                        <div key={status} className="px-4 py-2">
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                            />
-                            <span className="ml-2 block text-sm text-gray-700 dark:text-gray-300 capitalize">
-                              {status}
-                            </span>
-                          </label>
-                        </div>
-                      ))}
-                      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-800">
-                        <button className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                          Apply Filters
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
               
               <button className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -235,10 +326,9 @@ const OrdersPage = () => {
                 >
                   <option value="" disabled>Bulk Actions</option>
                   <option value="process">Mark as Processing</option>
-                  <option value="complete">Mark as Completed</option>
+                  <option value="ship">Mark as Shipped</option>
+                  <option value="deliver">Mark as Delivered</option>
                   <option value="cancel">Cancel Orders</option>
-                  <option value="print">Print Invoices</option>
-                  <option value="export">Export Selected</option>
                 </select>
                 <button
                   onClick={() => setSelectedOrders([])}
@@ -307,16 +397,18 @@ const OrdersPage = () => {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">#{order.id}</div>
-                          <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">{order.customer}</div>
+                          <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {order.shippingInfo.firstName} {order.shippingInfo.lastName}
+                          </div>
                           <div className="md:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {new Date(order.date).toLocaleDateString()} • {order.items} item{order.items !== 1 ? 's' : ''}
+                            {order.createdAt.toDate().toLocaleDateString()} • {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                           </div>
                         </td>
                         <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                          {order.customer}
+                          {order.shippingInfo.firstName} {order.shippingInfo.lastName}
                         </td>
                         <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(order.date).toLocaleDateString()}
+                          {order.createdAt.toDate().toLocaleDateString()}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -327,13 +419,16 @@ const OrdersPage = () => {
                           </div>
                         </td>
                         <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {order.items}
+                          {order.items.length}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-800 dark:text-gray-200">
                           ${order.total.toFixed(2)}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-2">
+                          <button 
+                            onClick={() => navigate(`/orders/${order.id}`)}
+                            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-2"
+                          >
                             <span className="sr-only sm:not-sr-only sm:mr-1">View</span>
                           </button>
                           <button className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300">

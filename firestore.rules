@@ -86,24 +86,47 @@ service cloud.firestore {
                    request.auth.token.isAdmin == true;
     }
 
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.isAdmin == true;
+    }
+    
+    function isSeller() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/sellers/$(request.auth.uid));
+    }
+    
+    function isOrderSeller(orderData) {
+      return isAuthenticated() && 
+             (orderData.sellerIds.hasAny([request.auth.uid]) || 
+              orderData.items.hasAny([{'sellerId': request.auth.uid}]));
+    }
+
     // Orders collection rules
     match /orders/{orderId} {
-      // Users can create orders
-      allow create: if request.auth != null;
+      // Allow read if user is the buyer or a seller in the order
+      allow read: if isAuthenticated() && 
+                  (resource.data.buyerId == request.auth.uid || 
+                   isOrderSeller(resource.data) ||
+                   isAdmin());
       
-      // Users can read their own orders
-      // Sellers can read orders containing their products
-      // Admins can read all orders
-      allow read: if request.auth != null &&
-                  (request.auth.uid == resource.data.userId ||
-                   resource.data.sellerIds.hasAny([request.auth.uid]) ||
-                   request.auth.token.isAdmin == true);
+      // Allow create for authenticated users
+      allow create: if isAuthenticated() && 
+                   request.resource.data.buyerId == request.auth.uid;
       
-      // Only admins can update orders (for status changes)
-      allow update: if request.auth != null &&
-                    request.auth.token.isAdmin == true;
+      // Allow update if user is a seller in the order
+      allow update: if isOrderSeller(resource.data) && 
+                   // Can only update status and seller-specific fields
+                   request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['status', 'updatedAt', 'sellerNotes']);
       
-      // No deletion
+      // Allow admin to update any order
+      allow update: if isAdmin();
+      
+      // No deletion allowed
       allow delete: if false;
     }
 
