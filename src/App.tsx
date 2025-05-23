@@ -33,8 +33,9 @@ class ErrorBoundary extends React.Component<
     this.state = { hasError: false };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static getDerivedStateFromError(error: Error) {
+    // Log the error for debugging purposes
+    console.debug('Error boundary caught:', error.message);
     return { hasError: true };
   }
 
