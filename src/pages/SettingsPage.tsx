@@ -10,7 +10,6 @@ import {
   CreditCard,
   Share2,
   Upload,
-  X,
   Edit2,
   Plus,
   Trash2
@@ -73,7 +72,7 @@ const SettingsPage = () => {
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof typeof prev],
+          ...(prev[parent as keyof typeof prev] as Record<string, any>),
           [child]: value
         }
       }));
