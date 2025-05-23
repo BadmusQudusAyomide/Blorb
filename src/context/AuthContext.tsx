@@ -11,13 +11,37 @@ import {
   onAuthStateChanged,
   type AuthError
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 interface Seller {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   storeName?: string;
+  storeLogo?: string;
+  storeBanner?: string;
+  businessAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  businessType?: string;
+  taxId?: string;
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  socialMedia?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  };
+  isProfileComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +52,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateSellerProfile: (sellerData: Partial<Seller>) => Promise<void>;
   error: string | null;
   loading: boolean;
 }
@@ -50,12 +75,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const sellerDoc = await getDoc(sellerRef);
           
           if (sellerDoc.exists()) {
-            setSeller({ ...sellerDoc.data() as Seller, id: sellerDoc.id });
+            const sellerData = sellerDoc.data();
+            setSeller({ 
+              ...sellerData as Seller, 
+              id: sellerDoc.id,
+              createdAt: sellerData.createdAt?.toDate() || new Date(),
+              updatedAt: sellerData.updatedAt?.toDate() || new Date()
+            });
           } else {
             // Create seller document if it doesn't exist
             const sellerData: Omit<Seller, 'id'> = {
               name: user.displayName || user.email?.split('@')[0] || 'Seller',
               email: user.email || '',
+              isProfileComplete: false,
               createdAt: new Date(),
               updatedAt: new Date()
             };
@@ -109,6 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const sellerData: Omit<Seller, 'id'> = {
         name,
         email,
+        isProfileComplete: false,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -124,6 +157,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateSellerProfile = async (sellerData: Partial<Seller>) => {
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    try {
+      const sellerRef = doc(db, 'sellers', user.uid);
+      const updatedData = {
+        ...sellerData,
+        updatedAt: new Date()
+      };
+
+      // Check if profile is complete
+      const isComplete = checkProfileCompletion({
+        ...seller,
+        ...sellerData
+      } as Seller);
+
+      await updateDoc(sellerRef, {
+        ...updatedData,
+        isProfileComplete: isComplete
+      });
+
+      // Update local state
+      setSeller(prev => prev ? { ...prev, ...updatedData, isProfileComplete: isComplete } : null);
+    } catch (err) {
+      console.error('Error updating seller profile:', err);
+      throw err;
+    }
+  };
+
+  const checkProfileCompletion = (seller: Seller): boolean => {
+    return !!(
+      seller.name &&
+      seller.email &&
+      seller.phone &&
+      seller.storeName &&
+      seller.businessAddress?.street &&
+      seller.businessAddress?.city &&
+      seller.businessAddress?.state &&
+      seller.businessAddress?.country &&
+      seller.businessAddress?.zipCode &&
+      seller.businessType &&
+      seller.taxId &&
+      seller.bankDetails?.bankName &&
+      seller.bankDetails?.accountNumber &&
+      seller.bankDetails?.accountName
+    );
   };
 
   const logout = async () => {
@@ -164,6 +247,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     login,
     signup,
     logout,
+    updateSellerProfile,
     error,
     loading
   };

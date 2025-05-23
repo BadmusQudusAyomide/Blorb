@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 import {
   Home,
@@ -38,6 +39,7 @@ interface NavItem {
 }
 
 const Sidebar = () => {
+  const { seller } = useAuth();
   const [isOpen, setIsOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
@@ -346,8 +348,8 @@ const Sidebar = () => {
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Sarah Johnson</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Premium Seller</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{seller?.name || 'Seller'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{seller?.storeName || 'Store'}</p>
                 </div>
               </div>
               <div className="flex">
