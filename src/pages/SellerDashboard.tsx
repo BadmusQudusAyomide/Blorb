@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase.config';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { useAuth } from '../context/AuthContext';
 import { 
-  ShoppingCart, 
-  Package, 
   DollarSign, 
-  TrendingUp,
-  BarChart2,
-  Users
+  CreditCard, 
+  TrendingUp, 
+  TrendingDown, 
+  Download, 
+  Filter, 
+  Calendar, 
+  ArrowRight, 
+  Search, 
+  Plus, 
+  Banknote, 
+  Wallet, 
+  CheckCircle, 
+  XCircle, 
+  ChevronDown, 
+  ChevronUp 
 } from 'lucide-react';
-import { db } from '../firebase.config';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot,
-  Timestamp
-} from 'firebase/firestore';
 
 interface Product {
   id: string;
@@ -42,22 +45,26 @@ interface Order {
 
 const SellerDashboard = () => {
   const { user, seller } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalSales: 0,
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalProducts: 0
+  });
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [recentProducts, setRecentProducts] = useState([]);
   const [error, setError] = useState<string | null>(null);
 
   // Calculate stats
-  const totalProducts = products.length;
-  const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
-  const growthRate = totalOrders > 0 ? ((orders.filter(o => o.createdAt.toDate() > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length / totalOrders) * 100).toFixed(0) : 0;
+  const totalProducts = stats.totalProducts;
+  const totalOrders = stats.totalOrders;
+  const totalRevenue = recentOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const growthRate = totalOrders > 0 ? ((recentOrders.filter(o => o.createdAt.toDate() > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length / totalOrders) * 100).toFixed(0) : 0;
 
   // Fetch products and orders
   useEffect(() => {
     if (!user?.uid) return;
 
-    setLoading(true);
     setError(null);
 
     // Fetch products
@@ -79,7 +86,8 @@ const SellerDashboard = () => {
             createdAt: data.createdAt?.toDate()
           } as Product;
         });
-        setProducts(productsData);
+        setRecentProducts(productsData);
+        setStats(prevStats => ({ ...prevStats, totalProducts: productsData.length }));
       },
       (error) => {
         console.error('Error fetching products:', error);
@@ -105,13 +113,12 @@ const SellerDashboard = () => {
             total: Number(data.total) || 0 // Ensure total is a number
           } as Order;
         });
-        setOrders(ordersData);
-        setLoading(false);
+        setRecentOrders(ordersData);
+        setStats(prevStats => ({ ...prevStats, totalOrders: ordersData.length }));
       },
       (error) => {
         console.error('Error fetching orders:', error);
         setError('Failed to fetch orders');
-        setLoading(false);
       }
     );
 
@@ -121,7 +128,7 @@ const SellerDashboard = () => {
     };
   }, [user?.uid]);
 
-  const stats = [
+  const statsCards = [
     { 
       title: "Total Orders", 
       value: totalOrders.toString(), 
@@ -180,6 +187,7 @@ const SellerDashboard = () => {
           
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {statsCards.map((stat, index) => (
             {stats.map((stat, index) => (
               <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800 transition-all duration-150 hover:shadow-md">
                 <div className="flex justify-between items-start">
