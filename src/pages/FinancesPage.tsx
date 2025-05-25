@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase.config';
 import { 
@@ -8,7 +8,9 @@ import {
   orderBy, 
   getDocs,
   Timestamp,
-  addDoc
+  addDoc,
+  doc,
+  getDoc
 } from 'firebase/firestore';
 import { DollarSign, CreditCard, TrendingUp, Wallet } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
@@ -34,43 +36,30 @@ interface Payout {
 }
 
 interface BankAccount {
-  id: string;
   bankName: string;
   accountNumber: string;
   accountName: string;
-  isDefault: boolean;
 }
 
 const FinancesPage = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [payoutAmount, setPayoutAmount] = useState<string>('');
-  const [payoutError, setPayoutError] = useState<string | null>(null);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalPayouts, setTotalPayouts] = useState(0);
   const [pendingPayouts, setPendingPayouts] = useState(0);
   const [availableBalance, setAvailableBalance] = useState(0);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.uid) {
-      fetchTransactions();
-      fetchPayouts();
-      fetchBankAccounts();
-    }
-  }, [user?.uid]);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!user?.uid) return;
 
     try {
+      setLoading(true);
       const transactionsRef = collection(db, 'transactions');
       const q = query(
         transactionsRef,
@@ -87,13 +76,17 @@ const FinancesPage = () => {
       setTransactions(transactionsData);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      setError('Failed to fetch transactions');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user?.uid]);
 
-  const fetchPayouts = async () => {
+  const fetchPayouts = useCallback(async () => {
     if (!user?.uid) return;
 
     try {
+      setLoading(true);
       const payoutsRef = collection(db, 'payouts');
       const q = query(
         payoutsRef,
@@ -110,34 +103,39 @@ const FinancesPage = () => {
       setPayouts(payoutsData);
     } catch (error) {
       console.error('Error fetching payouts:', error);
+      setError('Failed to fetch payouts');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user?.uid]);
 
-  const fetchBankAccounts = async () => {
+  const fetchBankAccount = useCallback(async () => {
     if (!user?.uid) return;
 
     try {
-      const bankAccountsRef = collection(db, 'bankAccounts');
-      const q = query(
-        bankAccountsRef,
-        where('sellerId', '==', user.uid)
-      );
-
-      const querySnapshot = await getDocs(q);
-      const bankAccountsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as BankAccount[];
-
-      setBankAccounts(bankAccountsData);
-      if (bankAccountsData.length > 0) {
-        const defaultAccount = bankAccountsData.find(account => account.isDefault);
-        setSelectedAccount(defaultAccount?.id || bankAccountsData[0].id);
+      setLoading(true);
+      const sellerDoc = await getDoc(doc(db, 'sellers', user.uid));
+      if (sellerDoc.exists()) {
+        const sellerData = sellerDoc.data();
+        if (sellerData.bankDetails) {
+          setBankAccount(sellerData.bankDetails);
+        }
       }
     } catch (error) {
-      console.error('Error fetching bank accounts:', error);
+      console.error('Error fetching bank account:', error);
+      setError('Failed to fetch bank account details');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchTransactions();
+      fetchPayouts();
+      fetchBankAccount();
+    }
+  }, [user?.uid, fetchTransactions, fetchPayouts, fetchBankAccount]);
 
   // Calculate financial stats
   useEffect(() => {
@@ -194,37 +192,37 @@ const FinancesPage = () => {
   };
 
   const handlePayoutRequest = async () => {
-    if (!user?.uid || !selectedAccount) return;
+    if (!user?.uid || !bankAccount) return;
 
     const amount = parseFloat(payoutAmount);
     if (isNaN(amount) || amount <= 0) {
-      setPayoutError('Please enter a valid amount');
+      setError('Please enter a valid amount');
       return;
     }
 
     try {
+      setLoading(true);
       const payoutData = {
         sellerId: user.uid,
         amount,
         status: 'requested',
         method: 'bank',
         reference: `PAY-${Date.now()}`,
-        bankAccountId: selectedAccount,
+        bankAccountId: bankAccount.accountNumber,
         date: Timestamp.now()
       };
 
       await addDoc(collection(db, 'payouts'), payoutData);
       setPayoutAmount('');
-      setPayoutError(null);
+      setError(null);
+      setPayoutSuccess(true);
       fetchPayouts();
     } catch (error) {
       console.error('Error requesting payout:', error);
-      setPayoutError('Failed to request payout. Please try again.');
+      setError('Failed to request payout. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleAccountSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedAccount(e.target.value);
   };
 
   // Close success message after 3 seconds
@@ -319,20 +317,14 @@ const FinancesPage = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Select Bank Account
+                    Bank Account
                   </label>
-                  <select
-                    value={selectedAccount}
-                    onChange={handleAccountSelect}
+                  <input
+                    type="text"
+                    value={bankAccount?.accountNumber || ''}
+                    readOnly
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="">Select a bank account</option>
-                    {bankAccounts.map(account => (
-                      <option key={account.id} value={account.id}>
-                        {account.bankName} - {account.accountNumber}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -341,7 +333,7 @@ const FinancesPage = () => {
                   </p>
                   <button
                     onClick={handlePayoutRequest}
-                    disabled={loading || !selectedAccount || availableBalance <= 0}
+                    disabled={loading || !bankAccount || availableBalance <= 0}
                     className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Request Payout'}
