@@ -4,15 +4,13 @@ import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 import { 
   Image as ImageIcon,
-  Plus,
   Edit2,
   Trash2,
   ArrowUp,
   ArrowDown,
-  Upload,
   X
 } from 'lucide-react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase.config';
 import { uploadImage } from '../utils/cloudinary';
 
@@ -28,7 +26,6 @@ interface CarouselItem {
 const CarouselPage = () => {
   const { user } = useAuth();
   const [items, setItems] = useState<CarouselItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -52,12 +49,10 @@ const CarouselPage = () => {
           ...doc.data()
         })) as CarouselItem[];
         setItems(items);
-        setLoading(false);
       },
       (error) => {
         console.error('Error fetching carousel items:', error);
         setError('Failed to fetch carousel items');
-        setLoading(false);
       }
     );
 
