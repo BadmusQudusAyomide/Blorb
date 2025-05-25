@@ -1,27 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../config/firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../firebase.config';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs,
+  Timestamp,
+  addDoc
+} from 'firebase/firestore';
+import { DollarSign, CreditCard, TrendingUp, Wallet } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { 
-  DollarSign,
-  CreditCard,
-  TrendingUp,
-  TrendingDown,
-  Download,
-  Filter,
-  Calendar,
-  ArrowRight,
-  Search,
-  Plus,
-  Banknote,
-  Wallet,
-  CheckCircle,
-  XCircle,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -51,25 +42,102 @@ interface BankAccount {
 }
 
 const FinancesPage = () => {
-  const { user, seller } = useAuth();
-  const [activeTab, setActiveTab] = useState<'transactions' | 'payouts' | 'statements' | 'request'>('transactions');
-  const [timeRange, setTimeRange] = useState('30d');
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState('');
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [payoutAmount, setPayoutAmount] = useState<string>('');
+  const [payoutError, setPayoutError] = useState<string | null>(null);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalPayouts, setTotalPayouts] = useState(0);
   const [pendingPayouts, setPendingPayouts] = useState(0);
   const [availableBalance, setAvailableBalance] = useState(0);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
-  const [payoutError, setPayoutError] = useState('');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchTransactions();
+      fetchPayouts();
+      fetchBankAccounts();
+    }
+  }, [user?.uid]);
+
+  const fetchTransactions = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const transactionsRef = collection(db, 'transactions');
+      const q = query(
+        transactionsRef,
+        where('sellerId', '==', user.uid),
+        orderBy('date', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const transactionsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Transaction[];
+
+      setTransactions(transactionsData);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
+  };
+
+  const fetchPayouts = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const payoutsRef = collection(db, 'payouts');
+      const q = query(
+        payoutsRef,
+        where('sellerId', '==', user.uid),
+        orderBy('date', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const payoutsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Payout[];
+
+      setPayouts(payoutsData);
+    } catch (error) {
+      console.error('Error fetching payouts:', error);
+    }
+  };
+
+  const fetchBankAccounts = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const bankAccountsRef = collection(db, 'bankAccounts');
+      const q = query(
+        bankAccountsRef,
+        where('sellerId', '==', user.uid)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const bankAccountsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as BankAccount[];
+
+      setBankAccounts(bankAccountsData);
+      if (bankAccountsData.length > 0) {
+        const defaultAccount = bankAccountsData.find(account => account.isDefault);
+        setSelectedAccount(defaultAccount?.id || bankAccountsData[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+    }
+  };
 
   // Calculate financial stats
   useEffect(() => {
@@ -88,134 +156,26 @@ const FinancesPage = () => {
     setAvailableBalance(totalRevenue - totalPayouts - pendingPayouts);
   }, [transactions, payouts, totalRevenue, totalPayouts, pendingPayouts]);
 
-  // Fetch financial data
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    setLoading(true);
-    setError(null);
-
-    // Fetch transactions
-    const transactionsRef = collection(db, 'transactions');
-    const transactionsQuery = query(
-      transactionsRef,
-      where('sellerId', '==', user.uid),
-      orderBy('date', 'desc')
-    );
-
-    const unsubscribeTransactions = onSnapshot(transactionsQuery,
-      (snapshot) => {
-        const transactionsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            amount: Number(data.amount) || 0,
-            date: data.date
-          } as Transaction;
-        });
-        setTransactions(transactionsData);
-      },
-      (error) => {
-        console.error('Error fetching transactions:', error);
-        setError('Failed to fetch transactions');
-      }
-    );
-
-    // Fetch payouts
-    const payoutsRef = collection(db, 'payouts');
-    const payoutsQuery = query(
-      payoutsRef,
-      where('sellerId', '==', user.uid),
-      orderBy('date', 'desc')
-    );
-
-    const unsubscribePayouts = onSnapshot(payoutsQuery,
-      (snapshot) => {
-        const payoutsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            amount: Number(data.amount) || 0,
-            date: data.date
-          } as Payout;
-        });
-        setPayouts(payoutsData);
-      },
-      (error) => {
-        console.error('Error fetching payouts:', error);
-        setError('Failed to fetch payouts');
-      }
-    );
-
-    // Fetch bank accounts
-    const fetchBankAccounts = async () => {
-      try {
-        const bankAccountsRef = collection(db, 'bankAccounts');
-        const bankAccountsQuery = query(
-          bankAccountsRef,
-          where('sellerId', '==', user.uid)
-        );
-
-        const unsubscribeBankAccounts = onSnapshot(bankAccountsQuery, (snapshot) => {
-          const bankAccountsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as BankAccount[];
-          setBankAccounts(bankAccountsData);
-          
-          // Set default account if available
-          const defaultAccount = bankAccountsData.find(account => account.isDefault);
-          if (defaultAccount) {
-            setSelectedAccount(defaultAccount.id);
-          }
-        });
-
-        return unsubscribeBankAccounts;
-      } catch (err) {
-        console.error('Error fetching bank accounts:', err);
-        setError('Failed to fetch bank accounts');
-      }
-    };
-
-    const unsubscribeBankAccounts = fetchBankAccounts();
-
-    return () => {
-      unsubscribeTransactions();
-      unsubscribePayouts();
-      unsubscribeBankAccounts?.then(unsubscribe => unsubscribe());
-    };
-  }, [user?.uid]);
-
-  const stats = [
-    { title: "Total Revenue", value: "₦42,500", change: "+18%", icon: <DollarSign className="w-5 h-5 text-green-600" /> },
-    { title: "Available Balance", value: "₦28,700", change: "+12%", icon: <CreditCard className="w-5 h-5 text-indigo-600" /> },
-    { title: "Pending Payouts", value: "₦15,000", change: "+5%", icon: <TrendingUp className="w-5 h-5 text-blue-600" /> },
-    { title: "Total Expenses", value: "₦4,500", change: "-8%", icon: <TrendingDown className="w-5 h-5 text-purple-600" /> }
-  ];
-
   const getStatusBadge = (status: string) => {
     const statusClasses = {
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-      failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-      processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-      requested: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
     };
 
-    return statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
+    return statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
 
   const getTypeBadge = (type: string) => {
     const typeClasses = {
-      sale: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-      refund: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-      payout: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-      withdrawal: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
+      sale: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      refund: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      payout: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      withdrawal: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
     };
 
-    return typeClasses[type as keyof typeof typeClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
+    return typeClasses[type as keyof typeof typeClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
 
   const formatCurrency = (amount: number) => {
@@ -228,7 +188,7 @@ const FinancesPage = () => {
   const formatDate = (timestamp: Timestamp) => {
     return new Date(timestamp.toDate()).toLocaleDateString('en-NG', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric'
     });
   };
@@ -236,36 +196,30 @@ const FinancesPage = () => {
   const handlePayoutRequest = async () => {
     if (!user?.uid || !selectedAccount) return;
 
+    const amount = parseFloat(payoutAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setPayoutError('Please enter a valid amount');
+      return;
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-
-      const selectedBankAccount = bankAccounts.find(account => account.id === selectedAccount);
-      if (!selectedBankAccount) {
-        throw new Error('Selected bank account not found');
-      }
-
       const payoutData = {
         sellerId: user.uid,
-        amount: availableBalance,
+        amount,
         status: 'requested',
         method: 'bank',
-        bankAccount: {
-          bankName: selectedBankAccount.bankName,
-          accountNumber: selectedBankAccount.accountNumber,
-          accountName: selectedBankAccount.accountName
-        },
-        date: Timestamp.now(),
-        reference: `PAY-${Date.now()}`
+        reference: `PAY-${Date.now()}`,
+        bankAccountId: selectedAccount,
+        date: Timestamp.now()
       };
 
       await addDoc(collection(db, 'payouts'), payoutData);
-      setPayoutSuccess(true);
-    } catch (err) {
-      console.error('Error requesting payout:', err);
-      setError('Failed to request payout');
-    } finally {
-      setLoading(false);
+      setPayoutAmount('');
+      setPayoutError(null);
+      fetchPayouts();
+    } catch (error) {
+      console.error('Error requesting payout:', error);
+      setPayoutError('Failed to request payout. Please try again.');
     }
   };
 
@@ -292,7 +246,7 @@ const FinancesPage = () => {
         <div className="p-4 md:p-6">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Finances</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your earnings and payouts</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your finances and track your earnings</p>
           </div>
 
           {error && (
