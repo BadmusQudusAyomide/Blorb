@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../config/firebase';
+import { collection, query, where, orderBy, onSnapshot, addDoc, Timestamp } from 'firebase/firestore';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 import { 
@@ -20,16 +22,6 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { db } from '../firebase.config';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot,
-  Timestamp,
-  getDocs
-} from 'firebase/firestore';
 
 interface Transaction {
   id: string;
@@ -64,7 +56,7 @@ const FinancesPage = () => {
   const [timeRange, setTimeRange] = useState('30d');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
-  const [selectedAccount, setSelectedAccount] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalPayouts, setTotalPayouts] = useState(0);
   const [pendingPayouts, setPendingPayouts] = useState(0);
@@ -76,7 +68,7 @@ const FinancesPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Calculate financial stats
@@ -160,30 +152,41 @@ const FinancesPage = () => {
     // Fetch bank accounts
     const fetchBankAccounts = async () => {
       try {
-        if (seller?.bankDetails) {
-          setBankAccounts([{
-            id: '1',
-            bankName: seller.bankDetails.bankName,
-            accountNumber: seller.bankDetails.accountNumber,
-            accountName: seller.bankDetails.accountName,
-            isDefault: true
-          }]);
-        }
-      } catch (error) {
-        console.error('Error fetching bank accounts:', error);
+        const bankAccountsRef = collection(db, 'bankAccounts');
+        const bankAccountsQuery = query(
+          bankAccountsRef,
+          where('sellerId', '==', user.uid)
+        );
+
+        const unsubscribeBankAccounts = onSnapshot(bankAccountsQuery, (snapshot) => {
+          const bankAccountsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as BankAccount[];
+          setBankAccounts(bankAccountsData);
+          
+          // Set default account if available
+          const defaultAccount = bankAccountsData.find(account => account.isDefault);
+          if (defaultAccount) {
+            setSelectedAccount(defaultAccount.id);
+          }
+        });
+
+        return unsubscribeBankAccounts;
+      } catch (err) {
+        console.error('Error fetching bank accounts:', err);
         setError('Failed to fetch bank accounts');
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchBankAccounts();
+    const unsubscribeBankAccounts = fetchBankAccounts();
 
     return () => {
       unsubscribeTransactions();
       unsubscribePayouts();
+      unsubscribeBankAccounts?.then(unsubscribe => unsubscribe());
     };
-  }, [user?.uid, seller?.bankDetails]);
+  }, [user?.uid]);
 
   const stats = [
     { title: "Total Revenue", value: "₦42,500", change: "+18%", icon: <DollarSign className="w-5 h-5 text-green-600" /> },
@@ -194,72 +197,72 @@ const FinancesPage = () => {
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      requested: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      requested: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
     };
 
-    return (
-      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status as keyof typeof statusClasses]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
+    return statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
   };
 
   const getTypeBadge = (type: string) => {
     const typeClasses = {
-      sale: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      refund: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      payout: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      withdrawal: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+      sale: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      refund: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      payout: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      withdrawal: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
     };
 
-    return (
-      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${typeClasses[type as keyof typeof typeClasses]}`}>
-        {type.charAt(0).toUpperCase() + type.slice(1)}
-      </span>
-    );
+    return typeClasses[type as keyof typeof typeClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 2
+      currency: 'NGN'
     }).format(amount);
   };
 
   const formatDate = (timestamp: Timestamp) => {
-    return timestamp.toDate().toLocaleDateString('en-NG', {
+    return new Date(timestamp.toDate()).toLocaleDateString('en-NG', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     });
   };
 
   const handlePayoutRequest = async () => {
-    if (!selectedAccount || availableBalance <= 0) return;
+    if (!user?.uid || !selectedAccount) return;
 
     try {
       setLoading(true);
-      const payoutsRef = collection(db, 'payouts');
-      const newPayout = {
-        sellerId: user?.uid,
+      setError(null);
+
+      const selectedBankAccount = bankAccounts.find(account => account.id === selectedAccount);
+      if (!selectedBankAccount) {
+        throw new Error('Selected bank account not found');
+      }
+
+      const payoutData = {
+        sellerId: user.uid,
         amount: availableBalance,
         status: 'requested',
         method: 'bank',
-        reference: `PAY-${Date.now()}`,
+        bankAccount: {
+          bankName: selectedBankAccount.bankName,
+          accountNumber: selectedBankAccount.accountNumber,
+          accountName: selectedBankAccount.accountName
+        },
         date: Timestamp.now(),
-        bankAccountId: selectedAccount
+        reference: `PAY-${Date.now()}`
       };
 
-      await addDoc(payoutsRef, newPayout);
-      setError(null);
-    } catch (error) {
-      console.error('Error requesting payout:', error);
+      await addDoc(collection(db, 'payouts'), payoutData);
+      setPayoutSuccess(true);
+    } catch (err) {
+      console.error('Error requesting payout:', err);
       setError('Failed to request payout');
     } finally {
       setLoading(false);
@@ -280,85 +283,75 @@ const FinancesPage = () => {
     }
   }, [payoutSuccess]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Sidebar />
-        <TopBar />
-        <main className="pt-16 pl-0 lg:pl-64">
-          <div className="p-4 md:p-6">
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md">
-              <p className="text-red-800 dark:text-red-200">{error}</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
       <Sidebar />
       <TopBar />
       
-      <main className="pt-16 pl-0 lg:pl-64">
+      <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-              Finances
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">Manage your earnings and payouts</p>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Finances</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your earnings and payouts</p>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
-              <div className="flex justify-between items-start">
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-md">
+              {error}
+            </div>
+          )}
+
+          {payoutSuccess && (
+            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-md">
+              Payout request submitted successfully
+            </div>
+          )}
+
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</p>
-                  <p className="text-2xl font-semibold text-gray-800 dark:text-white mt-1">{formatCurrency(totalRevenue)}</p>
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">+12% from last month</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalRevenue)}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
                   <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
-              <div className="flex justify-between items-start">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Available Balance</p>
-                  <p className="text-2xl font-semibold text-gray-800 dark:text-white mt-1">{formatCurrency(availableBalance)}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Ready for withdrawal</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Available Balance</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(availableBalance)}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                   <Wallet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
-              <div className="flex justify-between items-start">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Payouts</p>
-                  <p className="text-2xl font-semibold text-gray-800 dark:text-white mt-1">{formatCurrency(totalPayouts)}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">All time</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Payouts</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalPayouts)}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
                   <DollarSign className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
-              <div className="flex justify-between items-start">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Payouts</p>
-                  <p className="text-2xl font-semibold text-gray-800 dark:text-white mt-1">{formatCurrency(pendingPayouts)}</p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">In processing</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Pending Payouts</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(pendingPayouts)}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
                   <CreditCard className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                 </div>
               </div>
@@ -366,107 +359,91 @@ const FinancesPage = () => {
           </div>
 
           {/* Payout Request Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 mb-8">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Request Payout</h3>
-              <div className="flex flex-col md:flex-row gap-4">
-                <select
-                  value={selectedAccount}
-                  onChange={handleAccountSelect}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Select Bank Account</option>
-                  {bankAccounts.map(account => (
-                    <option key={account.id} value={account.id}>
-                      {account.bankName} - {account.accountNumber}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handlePayoutRequest}
-                  disabled={!selectedAccount || availableBalance <= 0 || loading}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                >
-                  {loading ? 'Processing...' : 'Request Payout'}
-                </button>
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-800">
+            <div className="p-4 md:p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Request Payout</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Select Bank Account
+                  </label>
+                  <select
+                    value={selectedAccount}
+                    onChange={handleAccountSelect}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="">Select a bank account</option>
+                    {bankAccounts.map(account => (
+                      <option key={account.id} value={account.id}>
+                        {account.bankName} - {account.accountNumber}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Available for payout: {formatCurrency(availableBalance)}
+                  </p>
+                  <button
+                    onClick={handlePayoutRequest}
+                    disabled={loading || !selectedAccount || availableBalance <= 0}
+                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Processing...' : 'Request Payout'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Recent Transactions */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 mb-8">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Transactions</h3>
+          {/* Transactions Table */}
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-800">
+            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-800">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Transactions</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Description
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {transactions.slice(0, 5).map((transaction) => (
-                    <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  {transactions.map((transaction) => (
+                    <tr key={transaction.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {formatDate(transaction.date)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getTypeBadge(transaction.type)}
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(transaction.type)}`}>
+                          {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(transaction.amount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(transaction.status)}
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(transaction.status)}`}>
+                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {transaction.description}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Recent Payouts */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Payouts</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reference</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {payouts.slice(0, 5).map((payout) => (
-                    <tr key={payout.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(payout.date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                        {formatCurrency(payout.amount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(payout.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {payout.method.charAt(0).toUpperCase() + payout.method.slice(1)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {payout.reference}
                       </td>
                     </tr>
                   ))}
