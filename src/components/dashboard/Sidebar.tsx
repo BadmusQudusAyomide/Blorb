@@ -237,7 +237,7 @@ const Sidebar = () => {
             </div>
             {isOpen && (
               <h2 className="ml-3 text-xl font-bold text-gray-800 dark:text-white">
-                Seller Hub
+                BlorbMart
               </h2>
             )}
           </div>

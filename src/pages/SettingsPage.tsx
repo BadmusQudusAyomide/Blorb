@@ -14,6 +14,7 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
+import { uploadImage } from '../utils/cloudinary';
 
 interface BankAccount {
   id: string;
@@ -123,9 +124,8 @@ const SettingsPage = () => {
     if (!file) return;
 
     try {
-      // Here you would typically upload the image to your storage service
-      // For now, we'll just use a placeholder URL
-      const imageUrl = URL.createObjectURL(file);
+      setLoading(true);
+      const imageUrl = await uploadImage(file);
       setFormData(prev => ({
         ...prev,
         [type]: imageUrl
@@ -133,6 +133,8 @@ const SettingsPage = () => {
     } catch (err) {
       console.error('Error uploading image:', err);
       setError('Failed to upload image');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,14 +148,19 @@ const SettingsPage = () => {
       // Convert bank accounts to the format expected by the API
       const bankDetails = bankAccounts.find(account => account.isDefault) || bankAccounts[0];
       
-      await updateSellerProfile({
+      // Only include bankDetails if there are bank accounts
+      const updateData = {
         ...formData,
-        bankDetails: bankDetails ? {
-          bankName: bankDetails.bankName,
-          accountNumber: bankDetails.accountNumber,
-          accountName: bankDetails.accountName
-        } : undefined
-      });
+        ...(bankDetails && {
+          bankDetails: {
+            bankName: bankDetails.bankName,
+            accountNumber: bankDetails.accountNumber,
+            accountName: bankDetails.accountName
+          }
+        })
+      };
+      
+      await updateSellerProfile(updateData);
       
       setSuccess('Profile updated successfully');
       setEditMode(null);

@@ -15,7 +15,7 @@ const TopBar = () => {
   return (
     <div className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-40">
       <div className="h-full px-3 sm:px-4 flex items-center justify-between">
-        <div className="flex items-center">
+        <div className="flex items-center pl-12 lg:pl-0">
           <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">Dashboard</h1>
         </div>
         
