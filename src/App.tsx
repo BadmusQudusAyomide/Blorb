@@ -83,11 +83,11 @@ function App() {
   return (
     <Router>
       <ErrorBoundary>
-        <AuthProvider>
+      <AuthProvider>
           <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
               
               {/* Protected Routes */}
               <Route path="/" element={
@@ -97,63 +97,63 @@ function App() {
               } />
               
               <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <SellerDashboard />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <SellerDashboard />
+              </ProtectedRoute>
               } />
               
               <Route path="/products" element={
-                <ProtectedRoute>
-                  <ProductsPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <ProductsPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/products/:tab" element={
-                <ProtectedRoute>
-                  <ProductsPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <ProductsPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/orders" element={
-                <ProtectedRoute>
-                  <OrdersPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <OrdersPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/orders/:tab" element={
-                <ProtectedRoute>
-                  <OrdersPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <OrdersPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/customers" element={
-                <ProtectedRoute>
-                  <CustomerPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <CustomerPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <AnalyticsPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/analytics/:tab" element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <AnalyticsPage />
+              </ProtectedRoute>
               } />
               
               <Route path="/marketing" element={
-                <ProtectedRoute>
-                  <MarketingPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <MarketingPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/marketing/:tab" element={
-                <ProtectedRoute>
-                  <MarketingPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <MarketingPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/carousel" element={
@@ -163,52 +163,52 @@ function App() {
               } />
               
               <Route path="/finances" element={
-                <ProtectedRoute>
-                  <FinancesPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <FinancesPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/finances/:tab" element={
-                <ProtectedRoute>
-                  <FinancesPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <FinancesPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/shipping" element={
-                <ProtectedRoute>
-                  <ShippingPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <ShippingPage />
+    </ProtectedRoute>
               } />
-              
+
               <Route path="/shipping/:tab" element={
-                <ProtectedRoute>
-                  <ShippingPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <ShippingPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/messages" element={
-                <ProtectedRoute>
-                  <MessagesPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <MessagesPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/settings" element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <SettingsPage />
+    </ProtectedRoute>
               } />
               
               <Route path="/help" element={
-                <ProtectedRoute>
-                  <HelpCenterPage />
-                </ProtectedRoute>
+    <ProtectedRoute>
+      <HelpCenterPage />
+    </ProtectedRoute>
               } />
               
               {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
           </Suspense>
-        </AuthProvider>
+      </AuthProvider>
       </ErrorBoundary>
     </Router>
   );
