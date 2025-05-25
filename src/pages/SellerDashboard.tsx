@@ -1,26 +1,16 @@
 import { useState, useEffect } from 'react';
+import type { ReactElement } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase.config';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, QuerySnapshot } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 import { 
   DollarSign, 
-  CreditCard, 
-  TrendingUp, 
-  TrendingDown, 
-  Download, 
-  Filter, 
-  Calendar, 
-  ArrowRight, 
-  Search, 
-  Plus, 
-  Banknote, 
-  Wallet, 
-  CheckCircle, 
-  XCircle, 
-  ChevronDown, 
-  ChevronUp 
+  TrendingUp,
+  ShoppingCart,
+  Package
 } from 'lucide-react';
 
 interface Product {
@@ -43,6 +33,13 @@ interface Order {
   sellerIds: string[];
 }
 
+interface StatCard {
+  title: string;
+  value: string;
+  change: string;
+  icon: ReactElement;
+}
+
 const SellerDashboard = () => {
   const { user, seller } = useAuth();
   const [stats, setStats] = useState({
@@ -51,8 +48,8 @@ const SellerDashboard = () => {
     totalCustomers: 0,
     totalProducts: 0
   });
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [recentProducts, setRecentProducts] = useState([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Calculate stats
@@ -76,20 +73,20 @@ const SellerDashboard = () => {
     );
 
     const unsubscribeProducts = onSnapshot(productsQuery, 
-      (snapshot) => {
+      (snapshot: QuerySnapshot<DocumentData>) => {
         const productsData = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             ...data,
-            price: Number(data.price) || 0, // Ensure price is a number
+            price: Number(data.price) || 0,
             createdAt: data.createdAt?.toDate()
           } as Product;
         });
         setRecentProducts(productsData);
         setStats(prevStats => ({ ...prevStats, totalProducts: productsData.length }));
       },
-      (error) => {
+      (error: Error) => {
         console.error('Error fetching products:', error);
         setError('Failed to fetch products');
       }
@@ -104,19 +101,19 @@ const SellerDashboard = () => {
     );
 
     const unsubscribeOrders = onSnapshot(ordersQuery,
-      (snapshot) => {
+      (snapshot: QuerySnapshot<DocumentData>) => {
         const ordersData = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             ...data,
-            total: Number(data.total) || 0 // Ensure total is a number
+            total: Number(data.total) || 0
           } as Order;
         });
         setRecentOrders(ordersData);
         setStats(prevStats => ({ ...prevStats, totalOrders: ordersData.length }));
       },
-      (error) => {
+      (error: Error) => {
         console.error('Error fetching orders:', error);
         setError('Failed to fetch orders');
       }
@@ -128,7 +125,7 @@ const SellerDashboard = () => {
     };
   }, [user?.uid]);
 
-  const statsCards = [
+  const statsCards: StatCard[] = [
     { 
       title: "Total Orders", 
       value: totalOrders.toString(), 
@@ -188,7 +185,6 @@ const SellerDashboard = () => {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {statsCards.map((stat, index) => (
-            {stats.map((stat, index) => (
               <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800 transition-all duration-150 hover:shadow-md">
                 <div className="flex justify-between items-start">
                   <div>
@@ -223,7 +219,7 @@ const SellerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {orders.slice(0, 5).map((order) => (
+                  {recentOrders.slice(0, 5).map((order) => (
                     <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600 dark:text-indigo-400">#{order.orderNumber}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -265,31 +261,23 @@ const SellerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {products.slice(0, 5).map((product) => (
+                  {recentProducts.slice(0, 5).map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {product.images[0] && (
-                            <img 
-                              src={product.images[0]} 
+                            <img
+                              src={product.images[0]}
                               alt={product.name}
                               className="w-10 h-10 rounded-md object-cover mr-3"
                             />
                           )}
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{product.name}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{product.category}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">₦{typeof product.price === 'number' ? product.price.toFixed(2) : '0.00'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          product.stock > 10 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                          product.stock > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
-                          {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                        </span>
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">₦{product.price.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">{product.stock}</td>
                     </tr>
                   ))}
                 </tbody>
