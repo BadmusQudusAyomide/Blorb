@@ -21,7 +21,8 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Image
 } from 'lucide-react';
 
 interface SubItem {
@@ -155,6 +156,11 @@ const Sidebar = () => {
       ]
     },
     {
+      label: 'Carousel',
+      icon: <Image className="w-5 h-5" />,
+      path: '/carousel',
+    },
+    {
       label: 'Finances',
       icon: <DollarSign className="w-5 h-5" />,
       key: 'finances',
@@ -196,6 +202,7 @@ const Sidebar = () => {
     ${isMobile && !isOpen ? 'hidden' : ''}
     border-r border-gray-200 dark:border-gray-800
     flex flex-col h-screen shadow-sm fixed
+    z-30
   `;
 
   // Blur overlay for mobile when sidebar is open - updated to use backdrop-blur

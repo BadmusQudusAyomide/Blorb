@@ -200,13 +200,13 @@ const SettingsPage = () => {
           {error && (
             <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-md">
               {error}
-            </div>
+                  </div>
           )}
 
           {success && (
             <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-md">
               {success}
-            </div>
+                </div>
           )}
 
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800">
@@ -571,8 +571,8 @@ const SettingsPage = () => {
                               </div>
                             )}
                           </div>
-                        </div>
-                      ))}
+              </div>
+            ))}
 
                       {editMode === 'banking' && (
                         <button
@@ -601,13 +601,13 @@ const SettingsPage = () => {
                           >
                             {loading ? 'Saving...' : 'Save Changes'}
                           </button>
-                        </div>
+                </div>
                       )}
-                    </div>
+              </div>
                   )}
 
                   {activeTab === 'social' && (
-                    <div className="space-y-4">
+              <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Website
@@ -620,7 +620,7 @@ const SettingsPage = () => {
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         />
                       </div>
-                      <div>
+                  <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Facebook
                         </label>
@@ -631,11 +631,11 @@ const SettingsPage = () => {
                           onChange={handleInputChange}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         />
-                      </div>
+                  </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Instagram
-                        </label>
+                  </label>
                         <input
                           type="url"
                           name="socialMedia.instagram"
@@ -643,8 +643,8 @@ const SettingsPage = () => {
                           onChange={handleInputChange}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         />
-                      </div>
-                      <div>
+                </div>
+                  <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Twitter
                         </label>

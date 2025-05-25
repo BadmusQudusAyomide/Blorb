@@ -15,6 +15,7 @@ import MessagesPage from './pages/MessagesPage';
 import ShippingPage from './pages/ShippingPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpCenterPage from './pages/HelpCenterPage';
+import CarouselPage from './pages/CarouselPage';
 
 // Loading component
 const Loading = () => (
@@ -152,6 +153,12 @@ function App() {
               <Route path="/marketing/:tab" element={
                 <ProtectedRoute>
                   <MarketingPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/carousel" element={
+                <ProtectedRoute>
+                  <CarouselPage />
                 </ProtectedRoute>
               } />
               
