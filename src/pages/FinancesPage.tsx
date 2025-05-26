@@ -10,11 +10,15 @@ import {
   Timestamp,
   addDoc,
   doc,
-  getDoc
+  getDoc,
+  onSnapshot,
+  QuerySnapshot
 } from 'firebase/firestore';
-import { DollarSign, CreditCard, TrendingUp, Wallet } from 'lucide-react';
+import type { DocumentData } from 'firebase/firestore';
+import { TrendingUp, Wallet } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 interface Transaction {
   id: string;
@@ -41,19 +45,21 @@ interface BankAccount {
   accountName: string;
 }
 
+interface Order {
+  id: string;
+  total: number;
+}
+
 const FinancesPage = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [payoutAmount, setPayoutAmount] = useState<string>('');
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [totalPayouts, setTotalPayouts] = useState(0);
-  const [pendingPayouts, setPendingPayouts] = useState(0);
-  const [availableBalance, setAvailableBalance] = useState(0);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalRevenue, setTotalRevenue] = useState(0);
 
   const fetchTransactions = useCallback(async () => {
     if (!user?.uid) return;
@@ -137,22 +143,49 @@ const FinancesPage = () => {
     }
   }, [user?.uid, fetchTransactions, fetchPayouts, fetchBankAccount]);
 
-  // Calculate financial stats
+  // Fetch orders to calculate total revenue
   useEffect(() => {
-    setTotalRevenue(transactions
-      .filter(t => t.type === 'sale')
-      .reduce((sum, t) => sum + t.amount, 0));
+    if (!user?.uid) return;
 
-    setTotalPayouts(payouts
-      .filter(p => p.status === 'paid')
-      .reduce((sum, p) => sum + p.amount, 0));
+    setLoading(true);
+    setError(null);
 
-    setPendingPayouts(payouts
-      .filter(p => p.status === 'pending' || p.status === 'processing')
-      .reduce((sum, p) => sum + p.amount, 0));
+    // Fetch orders
+    const ordersRef = collection(db, 'orders');
+    const ordersQuery = query(
+      ordersRef,
+      where('sellerIds', 'array-contains', user.uid),
+      orderBy('createdAt', 'desc')
+    );
 
-    setAvailableBalance(totalRevenue - totalPayouts - pendingPayouts);
-  }, [transactions, payouts, totalRevenue, totalPayouts, pendingPayouts]);
+    const unsubscribeOrders = onSnapshot(ordersQuery,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const ordersData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            total: Number(data.total) || 0
+          } as Order;
+        });
+        const revenue = ordersData.reduce((sum, order) => sum + (order.total || 0), 0);
+        setTotalRevenue(revenue);
+      },
+      (error: Error) => {
+        console.error('Error fetching orders:', error);
+        setError('Failed to fetch orders');
+      }
+    );
+
+    setLoading(false);
+
+    return () => {
+      unsubscribeOrders();
+    };
+  }, [user?.uid]);
+
+  // Calculate available balance
+  const availableBalance = totalRevenue - payouts.reduce((sum, payout) => sum + (payout.amount || 0), 0);
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {
@@ -176,37 +209,22 @@ const FinancesPage = () => {
     return typeClasses[type as keyof typeof typeClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(amount);
-  };
-
-  const formatDate = (timestamp: Timestamp) => {
-    return new Date(timestamp.toDate()).toLocaleDateString('en-NG', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   const handlePayoutRequest = async () => {
     if (!user?.uid || !bankAccount) return;
-
+    
     const amount = parseFloat(payoutAmount);
     if (isNaN(amount) || amount <= 0) {
       setError('Please enter a valid amount');
       return;
     }
-
+    
     try {
       setLoading(true);
       const payoutData = {
         sellerId: user.uid,
         amount,
-        status: 'requested',
-        method: 'bank',
+      status: 'requested',
+      method: 'bank',
         reference: `PAY-${Date.now()}`,
         bankAccountId: bankAccount.accountNumber,
         date: Timestamp.now()
@@ -246,12 +264,12 @@ const FinancesPage = () => {
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Finances</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">Manage your finances and track your earnings</p>
           </div>
-
+          
           {error && (
             <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-md">
               {error}
-            </div>
-          )}
+                  </div>
+                )}
 
           {payoutSuccess && (
             <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-md">
@@ -263,53 +281,29 @@ const FinancesPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between">
-                <div>
+                  <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalRevenue)}</p>
-                </div>
+                  </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
                   <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
               </div>
-            </div>
-
+          </div>
+            
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Available Balance</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(availableBalance)}</p>
-                </div>
+                  </div>
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                   <Wallet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Payouts</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalPayouts)}</p>
-                </div>
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                  <DollarSign className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Pending Payouts</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(pendingPayouts)}</p>
-                </div>
-                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
-                  <CreditCard className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
+                  </div>
               </div>
             </div>
           </div>
-
+          
           {/* Payout Request Section */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-800">
             <div className="p-4 md:p-6">
@@ -331,27 +325,27 @@ const FinancesPage = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Available for payout: {formatCurrency(availableBalance)}
                   </p>
-                  <button
+              <button
                     onClick={handlePayoutRequest}
                     disabled={loading || !bankAccount || availableBalance <= 0}
                     className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Request Payout'}
-                  </button>
+              </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Transactions Table */}
+                
+                {/* Transactions Table */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-800">
             <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-800">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Transactions</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Date
                     </th>
@@ -367,35 +361,35 @@ const FinancesPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Description
                     </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {transactions.map((transaction) => (
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                      {transactions.map((transaction) => (
                     <tr key={transaction.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(transaction.date)}
-                      </td>
+                            {formatDate(transaction.date)}
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(transaction.type)}`}>
-                          {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
-                        </span>
-                      </td>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(transaction.type)}`}>
+                              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                            </span>
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {formatCurrency(transaction.amount)}
-                      </td>
+                            {formatCurrency(transaction.amount)}
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(transaction.status)}`}>
-                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                        </span>
-                      </td>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(transaction.status)}`}>
+                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                            </span>
+                          </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {transaction.description}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
           </div>
         </div>
       </main>

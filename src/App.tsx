@@ -16,6 +16,7 @@ import ShippingPage from './pages/ShippingPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import CarouselPage from './pages/CarouselPage';
+import AddCategory from './AddCategory';
 
 // Loading component
 const Loading = () => (
@@ -88,6 +89,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/add-category" element={<AddCategory />} />
               
               {/* Protected Routes */}
               <Route path="/" element={

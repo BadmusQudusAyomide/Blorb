@@ -11,8 +11,8 @@ import {
   Trash2,
   Image as ImageIcon,
   X,
-  MoreVertical,
-  Sliders
+  Sliders,
+  Upload
 } from 'lucide-react';
 import { 
   collection, 
@@ -79,7 +79,6 @@ const ProductsPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
-  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [newProduct, setNewProduct] = useState<{
     name: string;
@@ -130,13 +129,11 @@ const ProductsPage = () => {
     },
     returnPolicy: ''
   });
-  const [newCategory, setNewCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [selectedStockFilter, setSelectedStockFilter] = useState<string>('all');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   // Load products on component mount
   useEffect(() => {
@@ -300,27 +297,6 @@ const ProductsPage = () => {
     }
   };
 
-  // Handle adding a new category
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const categoriesRef = collection(db, 'categories');
-      await addDoc(categoriesRef, {
-        name: newCategory,
-        description: '',
-        imageUrl: 'https://example.com/placeholder.jpg',
-        createdAt: new Date(),
-        productCount: 0
-      });
-      
-    setShowAddCategoryModal(false);
-    setNewCategory('');
-    } catch (error) {
-      console.error('Error adding category:', error);
-      // You might want to show an error message to the user here
-    }
-  };
-
   // Handle editing a product
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,16 +306,13 @@ const ProductsPage = () => {
     try {
       // Upload new images if any
       const newImageUrls = await Promise.all(
-        editingProduct.images
-          .filter((img): img is File => {
-            if (typeof img === 'string') return false;
-            return img instanceof File;
-          })
+        newProduct.images
+          .filter((img): img is File => img instanceof File)
           .map(img => uploadImage(img))
       );
 
       // Keep existing image URLs
-      const existingImageUrls = editingProduct.images
+      const existingImageUrls = newProduct.images
         .filter((img): img is string => typeof img === 'string');
 
       // Combine all image URLs
@@ -347,38 +320,64 @@ const ProductsPage = () => {
 
       // Update in Firestore
       const productRef = doc(db, 'products', editingProduct.id);
-      await updateDoc(productRef, {
-        name: editingProduct.name,
-        price: editingProduct.price.toString(),
-        discountPrice: editingProduct.discountPrice ? editingProduct.discountPrice.toString() : null,
-        category: editingProduct.category,
-        stock: editingProduct.stock.toString(),
+      const updateData = {
+        name: newProduct.name,
+        description: newProduct.description,
+        price: parseFloat(newProduct.price),
+        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : null,
+        stock: parseInt(newProduct.stock),
+        category: newProduct.category,
         images: allImageUrls,
-        description: editingProduct.description,
-        sku: editingProduct.sku,
-        brandName: editingProduct.brandName,
-        tags: Array.isArray(editingProduct.tags) ? editingProduct.tags : [],
-        colors: editingProduct.colors || [],
-        sizes: editingProduct.sizes || [],
-        weight: editingProduct.weight ? {
-          value: editingProduct.weight.value ? editingProduct.weight.value.toString() : null,
-          unit: editingProduct.weight.unit
+        sku: newProduct.sku,
+        brandName: newProduct.brandName || 'No Brand',
+        tags: newProduct.tags ? newProduct.tags.split(',').map(tag => tag.trim()) : [],
+        colors: newProduct.colors,
+        sizes: newProduct.sizes,
+        weight: newProduct.weight.value ? {
+          value: parseFloat(newProduct.weight.value),
+          unit: newProduct.weight.unit
         } : null,
-        dimensions: editingProduct.dimensions ? {
-          length: editingProduct.dimensions.length ? editingProduct.dimensions.length.toString() : null,
-          width: editingProduct.dimensions.width ? editingProduct.dimensions.width.toString() : null,
-          height: editingProduct.dimensions.height ? editingProduct.dimensions.height.toString() : null,
-          unit: editingProduct.dimensions.unit
+        dimensions: newProduct.dimensions.length ? {
+          length: parseFloat(newProduct.dimensions.length),
+          width: parseFloat(newProduct.dimensions.width),
+          height: parseFloat(newProduct.dimensions.height),
+          unit: newProduct.dimensions.unit
         } : null,
-        returnPolicy: editingProduct.returnPolicy || null,
+        returnPolicy: newProduct.returnPolicy || null,
         updatedAt: new Date()
-      });
+      };
 
-      setShowEditModal(false);
+      await updateDoc(productRef, updateData);
+
+      // Reset states
       setEditingProduct(null);
+      setNewProduct({
+        name: '',
+        description: '',
+        price: '',
+        discountPrice: '',
+        stock: '',
+        category: '',
+        images: [],
+        sku: '',
+        brandName: '',
+        tags: '',
+        colors: [],
+        sizes: [],
+        weight: {
+          value: '',
+          unit: 'kg'
+        },
+        dimensions: {
+          length: '',
+          width: '',
+          height: '',
+          unit: 'cm'
+        },
+        returnPolicy: ''
+      });
     } catch (error) {
       console.error('Error updating product:', error);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -386,31 +385,30 @@ const ProductsPage = () => {
   const startEdit = (product: Product) => {
     setEditingProduct(product);
     setNewProduct({
-      name: product.name || '',
-      description: product.description || '',
-      price: product.price?.toString() || '0',
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
       discountPrice: product.discountPrice?.toString() || '',
-      stock: product.stock?.toString() || '0',
-      category: product.category || '',
-      images: product.images || [],
-      sku: product.sku || '',
-      brandName: product.brandName || '',
+      stock: product.stock.toString(),
+      category: product.category,
+      images: product.images,
+      sku: product.sku,
+      brandName: product.brandName || 'No Brand',
       tags: product.tags?.join(', ') || '',
       colors: product.colors || [],
       sizes: product.sizes || [],
-      weight: product.weight ? {
-        value: product.weight.value?.toString() || '0',
-        unit: product.weight.unit || 'kg'
-      } : { value: '0', unit: 'kg' },
-      dimensions: product.dimensions ? {
-        length: product.dimensions.length?.toString() || '0',
-        width: product.dimensions.width?.toString() || '0',
-        height: product.dimensions.height?.toString() || '0',
-        unit: product.dimensions.unit || 'cm'
-      } : { length: '0', width: '0', height: '0', unit: 'cm' },
+      weight: {
+        value: product.weight?.value?.toString() || '',
+        unit: product.weight?.unit || 'kg'
+      },
+      dimensions: {
+        length: product.dimensions?.length?.toString() || '',
+        width: product.dimensions?.width?.toString() || '',
+        height: product.dimensions?.height?.toString() || '',
+        unit: product.dimensions?.unit || 'cm'
+      },
       returnPolicy: product.returnPolicy || ''
     });
-    setShowEditModal(true);
   };
 
   // Handle deleting a product
@@ -496,7 +494,7 @@ const ProductsPage = () => {
 
   const formatPrice = (price: number | string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return numPrice.toFixed(2);
+    return `₦${numPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Handle add product button click
@@ -745,7 +743,7 @@ const ProductsPage = () => {
                             {product.category}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                            ${formatPrice(product.price)}
+                            {formatPrice(product.price)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -757,21 +755,18 @@ const ProductsPage = () => {
                             </span>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end items-center space-x-2">
+                            <div className="flex justify-end items-center space-x-3">
                               <button 
                                 onClick={() => startEdit(product)}
                                 className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                               >
-                                <Edit className="w-4 h-4 md:w-5 md:h-5" />
+                                <Edit className="w-6 h-6" />
                               </button>
                               <button 
                                 className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                                 onClick={() => handleDeleteProduct(product.id)}
                               >
-                                <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
-                              </button>
-                              <button className="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                                <MoreVertical className="w-4 h-4" />
+                                <Trash2 className="w-6 h-6" />
                               </button>
                             </div>
                           </td>
@@ -841,8 +836,8 @@ const ProductsPage = () => {
                             ) : (
                                 <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                   <ImageIcon className="w-6 h-6 text-gray-400" />
-                              </div>
-                            )}
+                                </div>
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -938,7 +933,7 @@ const ProductsPage = () => {
           {showAddProductModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
               <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
-                <div className="p-3 sm:p-4 md:p-6 border-b border-gray-200 dark:border-gray-800">
+                <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Add New Product</h3>
                     <button 
@@ -966,7 +961,7 @@ const ProductsPage = () => {
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                           required
                         />
-                                </div>
+                      </div>
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
@@ -983,16 +978,15 @@ const ProductsPage = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price (₦)</label>
-                                    <input
+                          <input
                             type="number"
                             value={newProduct.price}
-                                      onChange={(e) => {
+                            onChange={(e) => {
                               const price = e.target.value;
                               const priceNum = parseFloat(price);
                               setNewProduct(prev => ({
                                 ...prev,
                                 price,
-                                // If discount price is higher than new price, reset it
                                 discountPrice: prev.discountPrice && parseFloat(prev.discountPrice) > priceNum ? price : prev.discountPrice
                               }));
                             }}
@@ -1002,7 +996,7 @@ const ProductsPage = () => {
                             min="0"
                             step="0.01"
                           />
-                      </div>
+                        </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1012,8 +1006,8 @@ const ProductsPage = () => {
                                 {Math.round(((parseFloat(newProduct.price) - parseFloat(newProduct.discountPrice)) / parseFloat(newProduct.price)) * 100)}% off
                               </span>
                             )}
-                        </label>
-                        <input
+                          </label>
+                          <input
                             type="number"
                             value={newProduct.discountPrice}
                             onChange={(e) => {
@@ -1033,32 +1027,27 @@ const ProductsPage = () => {
                             max={newProduct.price}
                             step="0.01"
                           />
-                          {newProduct.discountPrice && newProduct.discountPrice >= newProduct.price && (
-                            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                              Discount price must be less than regular price
-                            </p>
-                          )}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
-                        <input
+                          <input
                             type="number"
                             value={newProduct.stock}
                             onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
                             placeholder="Enter available quantity"
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          required
+                            required
                             min="0"
-                        />
-                      </div>
+                          />
+                        </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                        <select
-                          value={newProduct.category}
+                          <select
+                            value={newProduct.category}
                             onChange={(e) => {
                               const category = e.target.value;
                               setNewProduct(prev => ({
@@ -1068,45 +1057,13 @@ const ProductsPage = () => {
                               }));
                             }}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          required
-                        >
-                          <option value="">Select a category</option>
-                            {categories.map(category => (
-                            <option key={category.id} value={category.name}>{category.name}</option>
-                          ))}
-                        </select>
-                        </div>
-                      </div>
-                      </div>
-
-                    {/* Additional Information */}
-                    <div className="space-y-4">
-                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Additional Information</h4>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SKU</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={newProduct.sku}
-                            onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
-                            placeholder="Auto-generated SKU"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setNewProduct(prev => ({
-                              ...prev,
-                              sku: generateSKU(prev.category)
-                            }))}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"
-                            title="Generate new SKU"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </button>
+                            <option value="">Select a category</option>
+                            {categories.map(category => (
+                              <option key={category.id} value={category.name}>{category.name}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
@@ -1118,8 +1075,62 @@ const ProductsPage = () => {
                           onChange={(e) => setNewProduct({...newProduct, brandName: e.target.value})}
                           placeholder="Enter brand name"
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          required
                         />
                       </div>
+                    </div>
+
+                    {/* Image Upload Section */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Images</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {newProduct.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            {typeof image === 'string' ? (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                                <ImageIcon className="w-8 h-8 text-gray-400" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {newProduct.images.length < 4 && (
+                          <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
+                            />
+                            <div className="text-center">
+                              <Upload className="w-6 h-6 mx-auto text-gray-400" />
+                              <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
+                                Upload Image
+                              </span>
+                            </div>
+                          </label>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Upload up to 4 images. First image will be used as the main product image.
+                      </p>
+                    </div>
+
+                    {/* Additional Information */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Additional Information (Optional)</h4>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags (comma-separated)</label>
@@ -1133,449 +1144,36 @@ const ProductsPage = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Images</label>
-                        <label
-                          htmlFor="file-upload"
-                          className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-700 border-dashed rounded-lg cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors duration-150"
-                        >
-                          <input
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={handleImageUpload}
-                          />
-                          <div className="space-y-1 text-center">
-                            <svg
-                              className="mx-auto h-12 w-12 text-gray-400"
-                              stroke="currentColor"
-                              fill="none"
-                              viewBox="0 0 48 48"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                              <span className="relative rounded-md font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300">
-                                Upload files
-                              </span>
-                              <p className="pl-1">or drag and drop</p>
-                            </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              PNG, JPG, GIF up to 10MB
-                            </p>
-                          </div>
-                        </label>
-                        {newProduct.images.length > 0 && (
-                          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {newProduct.images.map((image, index) => (
-                              <div key={index} className="relative">
-                                <img
-                                  src={typeof image === 'string' ? image : URL.createObjectURL(image)}
-                                  alt={`Preview ${index + 1}`}
-                                  className="w-full h-32 object-cover rounded-lg"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeImage(index)}
-                                  className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md transition-colors duration-150"
-                                  title="Remove image"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddProductModal(false)}
-                      className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                      className="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Add Product
-                      </button>
-                    </div>
-                  </form>
-              </div>
-            </div>
-          )}
-
-          {/* Add Category Modal */}
-          {showAddCategoryModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md">
-                <div className="p-4 md:p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white">Add New Category</h3>
-                    <button 
-                      onClick={() => setShowAddCategoryModal(false)}
-                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <form onSubmit={handleAddCategory}>
-                    <div className="mb-6">
-                      <label htmlFor="category-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Category Name
-                      </label>
-                      <input
-                        type="text"
-                        id="category-name"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddCategoryModal(false)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                      >
-                        Add Category
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Edit Modal */}
-          {showEditModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div className="p-4 md:p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white">Edit Product</h3>
-                    <button 
-                      onClick={() => {
-                        setShowEditModal(false);
-                        setEditingProduct(null);
-                      }}
-                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <form onSubmit={handleEditProduct}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
-                      {/* Required Fields Section */}
-                      <div className="col-span-2">
-                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Required Information</h4>
-                      </div>
-
-                      {/* Product Name */}
-                      <div className="col-span-2">
-                        <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Name <span className="text-red-500">*</span>
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available Colors</label>
                         <input
                           type="text"
-                          id="product-name"
-                          placeholder="e.g., Premium Cotton T-Shirt"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.name}
-                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                          required
-                        />
-                      </div>
-
-                      {/* Product Description */}
-                      <div className="col-span-2">
-                        <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Description <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          id="product-description"
-                          rows={4}
-                          placeholder="Detailed description of the product..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.description}
-                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                          required
-                        />
-                      </div>
-
-                      {/* Price and Discount Price */}
-                      <div className="col-span-1">
-                        <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Regular Price <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            id="product-price"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                            value={newProduct.price}
-                            onChange={(e) => {
-                              const price = e.target.value;
-                              const priceNum = parseFloat(price);
-                              setNewProduct(prev => ({
-                                ...prev,
-                                price,
-                                // If discount price is higher than new price, reset it
-                                discountPrice: prev.discountPrice && parseFloat(prev.discountPrice) > priceNum ? price : prev.discountPrice
-                              }));
-                            }}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="col-span-1">
-                        <label htmlFor="product-discount-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Discount Price
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            id="product-discount-price"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="pl-7 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                            value={newProduct.discountPrice}
-                            onChange={(e) => {
-                              const discountPrice = e.target.value;
-                              const discountPriceNum = parseFloat(discountPrice);
-                              const priceNum = parseFloat(newProduct.price);
-                              if (discountPriceNum <= priceNum) {
-                                setNewProduct(prev => ({
-                                  ...prev,
-                                  discountPrice
-                                }));
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Stock and Category */}
-                      <div className="col-span-1">
-                        <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Stock Quantity <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          id="product-stock"
-                          min="0"
-                          placeholder="Available quantity"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.stock}
-                          onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
-                          required
-                        />
-                      </div>
-
-                      <div className="col-span-1">
-                        <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Category <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          id="product-category"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.category}
-                          onChange={(e) => {
-                            const category = e.target.value;
-                            setNewProduct(prev => ({
-                              ...prev,
-                              category,
-                              sku: generateSKU(category)
-                            }));
-                          }}
-                          required
-                        >
-                          <option value="">Select a category</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.name}>{category.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* SKU and Brand Name */}
-                      <div className="col-span-1">
-                        <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          SKU <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            id="product-sku"
-                            placeholder="Auto-generated SKU"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                            value={newProduct.sku}
-                            onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setNewProduct(prev => ({
-                              ...prev,
-                              sku: generateSKU(prev.category)
-                            }))}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </button>
-                          </div>
-                      </div>
-
-                      <div className="col-span-1">
-                        <label htmlFor="product-brand" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Brand Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="product-brand"
-                          placeholder="Enter brand name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.brandName}
-                          onChange={(e) => setNewProduct({...newProduct, brandName: e.target.value})}
-                          required
-                        />
-                      </div>
-
-                      {/* Product Images */}
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Product Images <span className="text-red-500">*</span> <span className="text-xs text-gray-500">(Max 4 images)</span>
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                          {newProduct.images.map((image, index) => (
-                            <div key={index} className="relative group">
-                              <img 
-                                src={typeof image === 'string' ? image : URL.createObjectURL(image)}
-                                alt={`Preview ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeImage(index)}
-                                className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-600 text-white rounded-full transition-colors duration-150 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                title="Remove image"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                          {newProduct.images.length < 4 && (
-                            <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
-                              <label className="cursor-pointer text-center p-4">
-                                <ImageIcon className="w-8 h-8 mx-auto text-gray-400" />
-                                <span className="mt-2 text-sm text-gray-500 dark:text-gray-400">Add Image</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={handleImageUpload}
-                                  multiple
-                                />
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Optional Fields Section */}
-                      <div className="col-span-2">
-                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Additional Information (Optional)</h4>
-                      </div>
-
-                      {/* Tags */}
-                      <div className="col-span-2">
-                        <label htmlFor="product-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Tags
-                        </label>
-                        <input
-                          type="text"
-                          id="product-tags"
-                          placeholder="Enter tags separated by commas"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                          value={newProduct.tags}
-                          onChange={(e) => setNewProduct({...newProduct, tags: e.target.value})}
-                        />
-                      </div>
-
-                      {/* Colors and Sizes */}
-                      <div className="col-span-1">
-                        <label htmlFor="product-colors" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Available Colors
-                        </label>
-                        <input
-                          type="text"
-                          id="product-colors"
-                          placeholder="Enter colors separated by commas"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.colors.join(', ')}
                           onChange={(e) => setNewProduct({...newProduct, colors: e.target.value.split(',').map(c => c.trim())})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          placeholder="red, blue, green"
                         />
                       </div>
 
-                      <div className="col-span-1">
-                        <label htmlFor="product-sizes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Available Sizes
-                        </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available Sizes</label>
                         <input
                           type="text"
-                          id="product-sizes"
-                          placeholder="Enter sizes separated by commas"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.sizes.join(', ')}
                           onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value.split(',').map(s => s.trim())})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          placeholder="S, M, L, XL"
                         />
                       </div>
 
-                      {/* Weight and Dimensions */}
-                      <div className="col-span-1">
-                        <label htmlFor="product-weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Weight
-                        </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Weight</label>
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            id="product-weight"
                             min="0"
                             step="0.01"
                             placeholder="Weight"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={newProduct.weight.value}
                             onChange={(e) => setNewProduct({
                               ...newProduct,
@@ -1583,7 +1181,7 @@ const ProductsPage = () => {
                             })}
                           />
                           <select
-                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={newProduct.weight.unit}
                             onChange={(e) => setNewProduct({
                               ...newProduct,
@@ -1598,15 +1196,13 @@ const ProductsPage = () => {
                         </div>
                       </div>
 
-                      <div className="col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Dimensions
-                        </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Dimensions</label>
                         <div className="grid grid-cols-4 gap-2">
-                        <input
-                          type="number"
-                            placeholder="L"
-                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                          <input
+                            type="number"
+                            placeholder="Length"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={newProduct.dimensions.length}
                             onChange={(e) => setNewProduct({
                               ...newProduct,
@@ -1615,8 +1211,8 @@ const ProductsPage = () => {
                           />
                           <input
                             type="number"
-                            placeholder="W"
-                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            placeholder="Width"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={newProduct.dimensions.width}
                             onChange={(e) => setNewProduct({
                               ...newProduct,
@@ -1625,8 +1221,8 @@ const ProductsPage = () => {
                           />
                           <input
                             type="number"
-                            placeholder="H"
-                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            placeholder="Height"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={newProduct.dimensions.height}
                             onChange={(e) => setNewProduct({
                               ...newProduct,
@@ -1634,7 +1230,7 @@ const ProductsPage = () => {
                             })}
                           />
                           <select
-                            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={newProduct.dimensions.unit}
                             onChange={(e) => setNewProduct({
                               ...newProduct,
@@ -1649,43 +1245,465 @@ const ProductsPage = () => {
                         </div>
                       </div>
 
-                      {/* Return Policy */}
-                      <div className="col-span-2">
-                        <label htmlFor="return-policy" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Return Policy
-                        </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Return Policy</label>
                         <textarea
-                          id="return-policy"
-                          rows={3}
-                          placeholder="Enter your return policy details..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                           value={newProduct.returnPolicy}
                           onChange={(e) => setNewProduct({...newProduct, returnPolicy: e.target.value})}
+                          placeholder="Enter your return policy details..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddProductModal(false);
+                        setNewProduct({
+                          name: '',
+                          description: '',
+                          price: '',
+                          discountPrice: '',
+                          stock: '',
+                          category: '',
+                          images: [],
+                          sku: '',
+                          brandName: '',
+                          tags: '',
+                          colors: [],
+                          sizes: [],
+                          weight: {
+                            value: '',
+                            unit: 'kg'
+                          },
+                          dimensions: {
+                            length: '',
+                            width: '',
+                            height: '',
+                            unit: 'cm'
+                          },
+                          returnPolicy: ''
+                        });
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Update Product
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Product Modal */}
+          {editingProduct && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Edit Product</h3>
+                    <button 
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setNewProduct({
+                          name: '',
+                          description: '',
+                          price: '',
+                          discountPrice: '',
+                          stock: '',
+                          category: '',
+                          images: [],
+                          sku: '',
+                          brandName: '',
+                          tags: '',
+                          colors: [],
+                          sizes: [],
+                          weight: {
+                            value: '',
+                            unit: 'kg'
+                          },
+                          dimensions: {
+                            length: '',
+                            width: '',
+                            height: '',
+                            unit: 'cm'
+                          },
+                          returnPolicy: ''
+                        });
+                      }}
+                      className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleEditProduct} className="p-3 sm:p-4 md:p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                    {/* Basic Information */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Basic Information</h4>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={newProduct.name}
+                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                          placeholder="Enter product name"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                        <textarea
+                          value={newProduct.description}
+                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                          placeholder="Enter product description"
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price (₦)</label>
+                          <input
+                            type="number"
+                            value={newProduct.price}
+                            onChange={(e) => {
+                              const price = e.target.value;
+                              const priceNum = parseFloat(price);
+                              setNewProduct(prev => ({
+                                ...prev,
+                                price,
+                                discountPrice: prev.discountPrice && parseFloat(prev.discountPrice) > priceNum ? price : prev.discountPrice
+                              }));
+                            }}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            required
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Discount Price (₦)
+                            {newProduct.discountPrice && parseFloat(newProduct.price) > 0 && (
+                              <span className="ml-2 text-sm text-red-600 dark:text-red-400">
+                                {Math.round(((parseFloat(newProduct.price) - parseFloat(newProduct.discountPrice)) / parseFloat(newProduct.price)) * 100)}% off
+                              </span>
+                            )}
+                          </label>
+                          <input
+                            type="number"
+                            value={newProduct.discountPrice}
+                            onChange={(e) => {
+                              const discountPrice = e.target.value;
+                              const discountPriceNum = parseFloat(discountPrice);
+                              const priceNum = parseFloat(newProduct.price);
+                              if (discountPriceNum <= priceNum) {
+                                setNewProduct(prev => ({
+                                  ...prev,
+                                  discountPrice
+                                }));
+                              }
+                            }}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            min="0"
+                            max={newProduct.price}
+                            step="0.01"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
+                          <input
+                            type="number"
+                            value={newProduct.stock}
+                            onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                            placeholder="Enter available quantity"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            required
+                            min="0"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                          <select
+                            value={newProduct.category}
+                            onChange={(e) => {
+                              const category = e.target.value;
+                              setNewProduct(prev => ({
+                                ...prev,
+                                category,
+                                sku: generateSKU(category)
+                              }));
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            required
+                          >
+                            <option value="">Select a category</option>
+                            {categories.map(category => (
+                              <option key={category.id} value={category.name}>{category.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
+                        <input
+                          type="text"
+                          value={newProduct.brandName}
+                          onChange={(e) => setNewProduct({...newProduct, brandName: e.target.value})}
+                          placeholder="Enter brand name"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          required
                         />
                       </div>
                     </div>
 
-                    {/* Form Actions */}
-                    <div className="flex justify-end space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowEditModal(false);
-                          setEditingProduct(null);
-                        }}
-                        className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Update Product
-                      </button>
+                    {/* Image Upload Section */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Images</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {newProduct.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            {typeof image === 'string' ? (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                                <ImageIcon className="w-8 h-8 text-gray-400" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {newProduct.images.length < 4 && (
+                          <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
+                            />
+                            <div className="text-center">
+                              <Upload className="w-6 h-6 mx-auto text-gray-400" />
+                              <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
+                                Upload Image
+                              </span>
+                            </div>
+                          </label>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Upload up to 4 images. First image will be used as the main product image.
+                      </p>
                     </div>
-                  </form>
-                </div>
+
+                    {/* Additional Information */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Additional Information (Optional)</h4>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags (comma-separated)</label>
+                        <input
+                          type="text"
+                          value={newProduct.tags}
+                          onChange={(e) => setNewProduct({...newProduct, tags: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          placeholder="tag1, tag2, tag3"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available Colors</label>
+                        <input
+                          type="text"
+                          value={newProduct.colors.join(', ')}
+                          onChange={(e) => setNewProduct({...newProduct, colors: e.target.value.split(',').map(c => c.trim())})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          placeholder="red, blue, green"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available Sizes</label>
+                        <input
+                          type="text"
+                          value={newProduct.sizes.join(', ')}
+                          onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value.split(',').map(s => s.trim())})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          placeholder="S, M, L, XL"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Weight</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Weight"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={newProduct.weight.value}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              weight: { ...newProduct.weight, value: e.target.value }
+                            })}
+                          />
+                          <select
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={newProduct.weight.unit}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              weight: { ...newProduct.weight, unit: e.target.value }
+                            })}
+                          >
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="lb">lb</option>
+                            <option value="oz">oz</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Dimensions</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <input
+                            type="number"
+                            placeholder="Length"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={newProduct.dimensions.length}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, length: e.target.value }
+                            })}
+                          />
+                          <input
+                            type="number"
+                            placeholder="Width"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={newProduct.dimensions.width}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, width: e.target.value }
+                            })}
+                          />
+                          <input
+                            type="number"
+                            placeholder="Height"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={newProduct.dimensions.height}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, height: e.target.value }
+                            })}
+                          />
+                          <select
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={newProduct.dimensions.unit}
+                            onChange={(e) => setNewProduct({
+                              ...newProduct,
+                              dimensions: { ...newProduct.dimensions, unit: e.target.value }
+                            })}
+                          >
+                            <option value="cm">cm</option>
+                            <option value="m">m</option>
+                            <option value="in">in</option>
+                            <option value="ft">ft</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Return Policy</label>
+                        <textarea
+                          value={newProduct.returnPolicy}
+                          onChange={(e) => setNewProduct({...newProduct, returnPolicy: e.target.value})}
+                          placeholder="Enter your return policy details..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setNewProduct({
+                          name: '',
+                          description: '',
+                          price: '',
+                          discountPrice: '',
+                          stock: '',
+                          category: '',
+                          images: [],
+                          sku: '',
+                          brandName: '',
+                          tags: '',
+                          colors: [],
+                          sizes: [],
+                          weight: {
+                            value: '',
+                            unit: 'kg'
+                          },
+                          dimensions: {
+                            length: '',
+                            width: '',
+                            height: '',
+                            unit: 'cm'
+                          },
+                          returnPolicy: ''
+                        });
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Update Product
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
