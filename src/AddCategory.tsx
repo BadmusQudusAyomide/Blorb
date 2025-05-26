@@ -59,21 +59,22 @@ const AddCategory: React.FC = () => {
       setSuccess(null);
 
       const categoryData = {
-        ...category,
-        sellerId: user.uid,
+        name: category.name,
+        description: category.description,
+        imageUrl: category.imageUrl,
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
-      const docRef = await addDoc(collection(db, "categories"), categoryData);
+      await addDoc(collection(db, "categories"), categoryData);
       setSuccess("Category added successfully!");
       setCategory({
         name: "Flash Sales",
         description: "Special time-limited offers and discounts",
         imageUrl: ""
       });
-    } catch (err) {
-      console.error("Error adding category:", err);
+    } catch (error) {
+      console.error("Error adding category:", error);
       setError("Failed to add category");
     } finally {
       setLoading(false);
