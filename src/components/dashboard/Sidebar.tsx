@@ -46,12 +46,10 @@ const Sidebar = () => {
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [activePath, setActivePath] = useState('/dashboard');
   
-  // Check if current path is active
   const isActive = (path: string) => {
     return activePath === path;
   };
   
-  // Toggle submenu expansion
   const toggleSubmenu = (key: string) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -59,7 +57,6 @@ const Sidebar = () => {
     }));
   };
   
-  // Handle navigation (would use router in a real app)
   const handleNavigation = (path: string) => {
     setActivePath(path);
     if (isMobile) {
@@ -67,7 +64,6 @@ const Sidebar = () => {
     }
   };
   
-  // Handle screen resize
   useEffect(() => {
     const checkScreenSize = () => {
       const isMobileView = window.innerWidth < 1024;
@@ -87,7 +83,6 @@ const Sidebar = () => {
     };
   }, []);
   
-  // Handle body overflow when sidebar is open on mobile
   useEffect(() => {
     if (isMobile && isOpen) {
       document.body.classList.add('overflow-hidden');
@@ -100,7 +95,6 @@ const Sidebar = () => {
     };
   }, [isMobile, isOpen]);
 
-  // Navigation items with submenus
   const navItems: NavItem[] = [
     {
       label: 'Dashboard',
@@ -193,19 +187,17 @@ const Sidebar = () => {
     }
   ];
 
-  // Calculate sidebar classes based on state
   const sidebarClasses = `
-    bg-white dark:bg-gray-900 
+    bg-white 
     transition-all duration-300 ease-in-out
     ${isOpen ? 'w-64' : 'w-20'} 
     ${isMobile && isOpen ? 'fixed inset-y-0 left-0 z-50 w-64' : ''} 
     ${isMobile && !isOpen ? 'hidden' : ''}
-    border-r border-gray-200 dark:border-gray-800
+    border-r border-gray-200
     flex flex-col h-screen shadow-sm fixed
     z-30
   `;
 
-  // Blur overlay for mobile when sidebar is open - updated to use backdrop-blur
   const overlayClasses = `
     fixed inset-0 bg-gray-900/30 backdrop-blur-sm z-40
     transition-all duration-300 ease-in-out
@@ -217,10 +209,10 @@ const Sidebar = () => {
       {/* Mobile toggle button */}
       {isMobile && (
         <button 
-          className="fixed top-4 left-4 z-50 p-2 rounded-md bg-white dark:bg-gray-800 shadow-md"
+          className="fixed top-4 left-4 z-50 p-2 rounded-md bg-white shadow-md"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+          <Menu className="w-6 h-6 text-blue-800" />
         </button>
       )}
       
@@ -230,13 +222,13 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside className={sidebarClasses}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center">
-            <div className="bg-indigo-600 text-white p-2 rounded-md">
+            <div className="bg-blue-800 text-white p-2 rounded-md">
               <Tag className="w-6 h-6" />
             </div>
             {isOpen && (
-              <h2 className="ml-3 text-xl font-bold text-gray-800 dark:text-white">
+              <h2 className="ml-3 text-xl font-bold text-blue-800">
                 BlorbMart
               </h2>
             )}
@@ -245,13 +237,13 @@ const Sidebar = () => {
           {/* Collapse button for desktop */}
           {!isMobile && (
             <button 
-              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-1 rounded-md hover:bg-blue-50"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? (
-                <ChevronLeft className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <ChevronLeft className="w-5 h-5 text-blue-800" />
               ) : (
-                <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-blue-800" />
               )}
             </button>
           )}
@@ -259,10 +251,10 @@ const Sidebar = () => {
           {/* Close button for mobile */}
           {isMobile && isOpen && (
             <button 
-              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-1 rounded-md hover:bg-blue-50"
               onClick={() => setIsOpen(false)}
             >
-              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <X className="w-5 h-5 text-blue-800" />
             </button>
           )}
         </div>
@@ -277,7 +269,7 @@ const Sidebar = () => {
                   <button
                     className={`
                       flex items-center justify-between w-full px-3 py-2 rounded-md
-                      ${isActive(item.path || '') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
+                      ${isActive(item.path || '') ? 'bg-blue-50 text-blue-800' : 'text-gray-700 hover:bg-blue-50'}
                       transition-colors duration-150 ease-in-out
                       ${isOpen ? 'text-left' : 'justify-center'}
                     `}
@@ -290,20 +282,20 @@ const Sidebar = () => {
                     
                     {isOpen && item.key && (
                       expandedMenus[item.key] ? 
-                      <ChevronDown className="w-4 h-4" /> : 
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4 text-blue-800" /> : 
+                      <ChevronRight className="w-4 h-4 text-blue-800" />
                     )}
                   </button>
                 ) : (
                   <Link
-  to={item.path || '#'}
-  onClick={() => handleNavigation(item.path || '')}
-  className={`
-    flex items-center justify-between w-full px-3 py-2 rounded-md
-    ${isActive(item.path || '') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
-    transition-colors duration-150 ease-in-out
-    ${isOpen ? '' : 'justify-center'}
-  `}
+                    to={item.path || '#'}
+                    onClick={() => handleNavigation(item.path || '')}
+                    className={`
+                      flex items-center justify-between w-full px-3 py-2 rounded-md
+                      ${isActive(item.path || '') ? 'bg-blue-50 text-blue-800' : 'text-gray-700 hover:bg-blue-50'}
+                      transition-colors duration-150 ease-in-out
+                      ${isOpen ? '' : 'justify-center'}
+                    `}
                   >
                     <div className="flex items-center">
                       <span className={`${isOpen ? 'mr-3' : ''}`}>{item.icon}</span>
@@ -311,7 +303,7 @@ const Sidebar = () => {
                     </div>
                     
                     {isOpen && item.badge && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-600">
                         {item.badge}
                       </span>
                     )}
@@ -327,7 +319,7 @@ const Sidebar = () => {
                         to={subItem.path}
                         className={`
                           block w-full text-left pl-3 pr-4 py-2 rounded-md text-sm
-                          ${isActive(subItem.path) ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}
+                          ${isActive(subItem.path) ? 'bg-blue-50 text-blue-800' : 'text-gray-600 hover:bg-blue-50'}
                           transition-colors duration-150 ease-in-out
                         `}
                       >
@@ -342,26 +334,26 @@ const Sidebar = () => {
         </div>
         
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-4 border-t border-gray-200">
           {isOpen ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="relative">
-                  <img 
-                    src="/api/placeholder/40/40" 
-                    alt="User" 
-                    className="w-10 h-10 rounded-full border-2 border-indigo-500"
-                  />
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></span>
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-blue-800 font-medium">
+                      {seller?.name?.charAt(0) || 'S'}
+                    </span>
+                  </div>
+                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{seller?.name || 'Seller'}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{seller?.storeName || 'Store'}</p>
+                  <p className="text-sm font-medium text-gray-700">{seller?.name || 'Seller'}</p>
+                  <p className="text-xs text-gray-500">{seller?.storeName || 'Store'}</p>
                 </div>
               </div>
               <div className="flex">
-                <button className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 relative">
-                  <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <button className="p-1 rounded-md hover:bg-blue-50 relative">
+                  <Bell className="w-5 h-5 text-blue-800" />
                   <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
               </div>
@@ -369,12 +361,12 @@ const Sidebar = () => {
           ) : (
             <div className="flex justify-center">
               <div className="relative">
-                <img 
-                  src="/api/placeholder/32/32" 
-                  alt="User" 
-                  className="w-8 h-8 rounded-full border-2 border-indigo-500"
-                />
-                <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></span>
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-blue-800 text-sm font-medium">
+                    {seller?.name?.charAt(0) || 'S'}
+                  </span>
+                </div>
+                <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border-2 border-white"></span>
               </div>
             </div>
           )}

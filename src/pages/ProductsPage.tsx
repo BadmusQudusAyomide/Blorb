@@ -9,10 +9,9 @@ import {
   ChevronUp,
   Edit,
   Trash2,
-  Image as ImageIcon,
+  ImageIcon,
   X,
-  Sliders,
-  Upload
+  Sliders
 } from 'lucide-react';
 import { 
   collection, 
@@ -507,7 +506,7 @@ const ProductsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
+    <div className="min-h-screen bg-white">
       <Sidebar />
       <TopBar />
       
@@ -515,8 +514,8 @@ const ProductsPage = () => {
         <div className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Products</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <h2 className="text-2xl font-bold text-blue-900">Products</h2>
+              <p className="text-sm text-gray-600 mt-1">
                 {activeTab === 'all' && 'Manage your product catalog'}
                 {activeTab === 'inventory' && 'Track and update inventory levels'}
                 {activeTab === 'categories' && 'Organize products by categories'}
@@ -525,7 +524,7 @@ const ProductsPage = () => {
             <div className="flex flex-wrap gap-3 w-full md:w-auto">
               <button 
                 onClick={handleAddProductClick}
-                className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm md:text-base w-full md:w-auto justify-center"
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base w-full md:w-auto justify-center"
               >
                 <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Add Product
@@ -534,22 +533,22 @@ const ProductsPage = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 dark:border-gray-700 mb-6">
+          <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 mb-6">
             <Link
   to="/products"
-  className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+  className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
 >
   All Products
 </Link>
             <Link
               to="/products/inventory"
-              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Inventory
             </Link>
             <Link
               to="/products/categories"
-              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'categories' ? 'text-indigo-600 border-b-2 border-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'categories' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Categories
             </Link>
@@ -562,7 +561,7 @@ const ProductsPage = () => {
               <input
                 type="text"
                 placeholder="Search products..."
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm md:text-base"
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -571,20 +570,20 @@ const ProductsPage = () => {
             <div className="flex gap-3 w-full md:w-auto">
               <button 
                 onClick={() => setShowMobileFilters(!showMobileFilters)}
-                className="md:hidden flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 text-sm"
+                className="md:hidden flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                <Sliders className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+                <Sliders className="w-4 h-4 mr-2 text-gray-500" />
                 Filters
               </button>
               
-              <button className="hidden md:flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 text-sm">
-                <Filter className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+              <button className="hidden md:flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <Filter className="w-4 h-4 mr-2 text-gray-500" />
                 Filters
               </button>
               
               <div className="relative hidden md:block">
                 <select
-                  className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                  className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
                 >
@@ -598,7 +597,7 @@ const ProductsPage = () => {
               
               <div className="relative hidden md:block">
                 <select
-                  className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                  className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   value={selectedStockFilter}
                   onChange={(e) => setSelectedStockFilter(e.target.value)}
                 >
@@ -614,12 +613,12 @@ const ProductsPage = () => {
 
           {/* Mobile filters */}
           {showMobileFilters && (
-            <div className="md:hidden bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+            <div className="md:hidden bg-white rounded-lg shadow p-4 mb-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     value={selectedCategoryFilter}
                     onChange={(e) => setSelectedCategoryFilter(e.target.value)}
                   >
@@ -630,9 +629,9 @@ const ProductsPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     value={selectedStockFilter}
                     onChange={(e) => setSelectedStockFilter(e.target.value)}
                   >
@@ -648,12 +647,12 @@ const ProductsPage = () => {
 
           {/* Content based on active tab */}
           {activeTab === 'all' && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-800">
+            <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <button 
                           className="flex items-center focus:outline-none"
                           onClick={() => requestSort('name')}
@@ -666,7 +665,7 @@ const ProductsPage = () => {
                           )}
                         </button>
                       </th>
-                      <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <button 
                           className="flex items-center focus:outline-none"
                           onClick={() => requestSort('category')}
@@ -679,7 +678,7 @@ const ProductsPage = () => {
                           )}
                         </button>
                       </th>
-                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <button 
                           className="flex items-center focus:outline-none"
                           onClick={() => requestSort('price')}
@@ -692,7 +691,7 @@ const ProductsPage = () => {
                           )}
                         </button>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <button 
                           className="flex items-center focus:outline-none"
                           onClick={() => requestSort('stock')}
@@ -705,15 +704,15 @@ const ProductsPage = () => {
                           )}
                         </button>
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProducts.length > 0 ? (
                       filteredProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <tr key={product.id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-3">
                               <div className="flex-shrink-0">
@@ -724,32 +723,32 @@ const ProductsPage = () => {
                                     className="w-12 h-12 rounded-md object-cover"
                                 />
                               ) : (
-                                  <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                  <div className="w-12 h-12 rounded-md bg-gray-200 flex items-center justify-center">
                                     <ImageIcon className="w-6 h-6 text-gray-400" />
                                 </div>
                               )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                <div className="text-sm font-medium text-gray-900 truncate">
                                   {product.name}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs text-gray-500">
                                   {product.sku}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 text-sm">
+                          <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-gray-500 text-sm">
                             {product.category}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-800">
                             {formatPrice(product.price)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              product.stock > 10 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                              product.stock > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                              'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              product.stock > 10 ? 'bg-green-100 text-green-800' :
+                              product.stock > 0 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
                             }`}>
                               {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
                             </span>
@@ -758,12 +757,11 @@ const ProductsPage = () => {
                             <div className="flex justify-end items-center space-x-3">
                               <button 
                                 onClick={() => startEdit(product)}
-                                className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                              >
+                                className="text-indigo-600 hover:text-indigo-900">
                                 <Edit className="w-6 h-6" />
                               </button>
                               <button 
-                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                className="text-red-600 hover:text-red-900"
                                 onClick={() => handleDeleteProduct(product.id)}
                               >
                                 <Trash2 className="w-6 h-6" />
@@ -774,7 +772,7 @@ const ProductsPage = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                           No products found matching your criteria
                         </td>
                       </tr>
@@ -782,15 +780,15 @@ const ProductsPage = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-500">
                   Showing <span className="font-medium">{filteredProducts.length}</span> of <span className="font-medium">{products.length}</span> products
                 </div>
                 <div className="flex space-x-2">
-                  <button className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                  <button className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                     Previous
                   </button>
-                  <button className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                  <button className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                     Next
                   </button>
                 </div>
@@ -799,31 +797,31 @@ const ProductsPage = () => {
           )}
 
           {activeTab === 'inventory' && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-800">
+            <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Current Stock
                       </th>
-                      <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Last Updated
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProducts.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <tr key={product.id} className="hover:bg-gray-50">
                         <td className="px-4 py-4">
                           <div className="flex items-center space-x-3">
                             <div className="flex-shrink-0">
@@ -834,13 +832,13 @@ const ProductsPage = () => {
                                   className="w-12 h-12 rounded-md object-cover"
                               />
                             ) : (
-                                <div className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-md bg-gray-200 flex items-center justify-center">
                                   <ImageIcon className="w-6 h-6 text-gray-400" />
                                 </div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              <div className="text-sm font-medium text-gray-900 truncate">
                                 {product.name}
                               </div>
                             </div>
@@ -857,23 +855,23 @@ const ProductsPage = () => {
                               );
                               setProducts(updatedProducts);
                             }}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                            className="w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </td>
                         <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            product.stock > 10 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            product.stock > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            product.stock > 10 ? 'bg-green-100 text-green-800' :
+                            product.stock > 0 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
                           }`}>
                             {product.stock > 10 ? 'In Stock' : product.stock > 0 ? 'Low Stock' : 'Out of Stock'}
                           </span>
                         </td>
-                        <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                           Today
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">
+                          <button className="text-indigo-600 hover:text-indigo-900">
                             Update
                           </button>
                         </td>
@@ -888,21 +886,21 @@ const ProductsPage = () => {
           {activeTab === 'categories' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {categories.map((category) => (
-                <div key={category.id} className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 hover:shadow-md transition-shadow">
+                <div key={category.id} className="bg-white rounded-lg shadow border border-gray-200 p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">{category.name}</h3>
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      <h3 className="text-lg font-medium text-gray-900">{category.name}</h3>
+                      <p className="mt-1 text-sm text-gray-500">
                         {category.description || 'No description available'}
                       </p>
                     </div>
                     <div className="flex space-x-2">
-                      <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                      <button className="text-indigo-600 hover:text-indigo-900">
                         <Edit className="w-5 h-5" />
                       </button>
                       <button 
                         onClick={() => handleDeleteCategory(category.id)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-red-600 hover:text-red-900"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -912,7 +910,7 @@ const ProductsPage = () => {
                     <Link 
                       to="/products" 
                       onClick={() => setSelectedCategoryFilter(category.name)}
-                      className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                      className="text-sm text-indigo-600 hover:text-indigo-800"
                     >
                       View products
                     </Link>
@@ -932,14 +930,13 @@ const ProductsPage = () => {
           {/* Add Product Modal */}
           {showAddProductModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Add New Product</h3>
+                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900">Add New Product</h3>
                     <button 
                       onClick={() => setShowAddProductModal(false)}
-                      className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                    >
+                      className="text-gray-400 hover:text-gray-500">
                       <X className="h-5 w-5" />
                     </button>
                   </div>
@@ -949,35 +946,35 @@ const ProductsPage = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                     {/* Basic Information */}
                     <div className="space-y-4">
-                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Basic Information</h4>
+                      <h4 className="text-sm font-medium text-gray-700">Basic Information</h4>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                         <input
                           type="text"
                           value={newProduct.name}
                           onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
                           placeholder="Enter product name"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                           required
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                         <textarea
                           value={newProduct.description}
                           onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                           placeholder="Enter product description"
                           rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                           required
                         />
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price (₦)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Price (₦)</label>
                           <input
                             type="number"
                             value={newProduct.price}
@@ -991,7 +988,7 @@ const ProductsPage = () => {
                               }));
                             }}
                             placeholder="0.00"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                             required
                             min="0"
                             step="0.01"
@@ -999,10 +996,10 @@ const ProductsPage = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
                             Discount Price (₦)
                             {newProduct.discountPrice && parseFloat(newProduct.price) > 0 && (
-                              <span className="ml-2 text-sm text-red-600 dark:text-red-400">
+                              <span className="ml-2 text-sm text-red-600">
                                 {Math.round(((parseFloat(newProduct.price) - parseFloat(newProduct.discountPrice)) / parseFloat(newProduct.price)) * 100)}% off
                               </span>
                             )}
@@ -1022,7 +1019,7 @@ const ProductsPage = () => {
                               }
                             }}
                             placeholder="0.00"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                             min="0"
                             max={newProduct.price}
                             step="0.01"
@@ -1032,20 +1029,20 @@ const ProductsPage = () => {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
                           <input
                             type="number"
                             value={newProduct.stock}
                             onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
                             placeholder="Enter available quantity"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                             required
                             min="0"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                           <select
                             value={newProduct.category}
                             onChange={(e) => {
@@ -1056,7 +1053,7 @@ const ProductsPage = () => {
                                 sku: generateSKU(category)
                               }));
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                             required
                           >
                             <option value="">Select a category</option>
@@ -1068,13 +1065,13 @@ const ProductsPage = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
                         <input
                           type="text"
                           value={newProduct.brandName}
                           onChange={(e) => setNewProduct({...newProduct, brandName: e.target.value})}
                           placeholder="Enter brand name"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                           required
                         />
                       </div>
@@ -1082,23 +1079,16 @@ const ProductsPage = () => {
 
                     {/* Image Upload Section */}
                     <div className="space-y-4">
-                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Images</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-4">Product Images</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {newProduct.images.map((image, index) => (
                           <div key={index} className="relative group">
-                            {typeof image === 'string' ? (
-                              <img
-                                src={image}
-                                alt={`Product ${index + 1}`}
-                                className="w-full h-24 object-cover rounded-lg"
-                              />
-                            ) : (
-                              <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                                <ImageIcon className="w-8 h-8 text-gray-400" />
-                              </div>
-                            )}
+                            <img
+                              src={image}
+                              alt={`Product ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
                             <button
-                              type="button"
                               onClick={() => removeImage(index)}
                               className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                             >
@@ -1106,26 +1096,18 @@ const ProductsPage = () => {
                             </button>
                           </div>
                         ))}
-                        {newProduct.images.length < 4 && (
-                          <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400">
+                        {newProduct.images.length < 8 && (
+                          <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500">
                             <input
                               type="file"
+                              className="hidden"
                               accept="image/*"
                               onChange={handleImageUpload}
-                              className="hidden"
                             />
-                            <div className="text-center">
-                              <Upload className="w-6 h-6 mx-auto text-gray-400" />
-                              <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
-                                Upload Image
-                              </span>
-                            </div>
+                            <Plus className="w-6 h-6 text-gray-400" />
                           </label>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Upload up to 4 images. First image will be used as the main product image.
-                      </p>
                     </div>
 
                     {/* Additional Information */}
@@ -1258,46 +1240,18 @@ const ProductsPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 flex justify-end space-x-3">
                     <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddProductModal(false);
-                        setNewProduct({
-                          name: '',
-                          description: '',
-                          price: '',
-                          discountPrice: '',
-                          stock: '',
-                          category: '',
-                          images: [],
-                          sku: '',
-                          brandName: '',
-                          tags: '',
-                          colors: [],
-                          sizes: [],
-                          weight: {
-                            value: '',
-                            unit: 'kg'
-                          },
-                          dimensions: {
-                            length: '',
-                            width: '',
-                            height: '',
-                            unit: 'cm'
-                          },
-                          returnPolicy: ''
-                        });
-                      }}
-                      className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
+                      onClick={() => setShowAddProductModal(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                     >
                       Cancel
                     </button>
                     <button
-                      type="submit"
-                      className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      onClick={handleAddProduct}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
                     >
-                      Update Product
+                      Add Product
                     </button>
                   </div>
                 </form>
@@ -1486,22 +1440,15 @@ const ProductsPage = () => {
                     {/* Image Upload Section */}
                     <div className="space-y-4">
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Images</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {newProduct.images.map((image, index) => (
                           <div key={index} className="relative group">
-                            {typeof image === 'string' ? (
-                              <img
-                                src={image}
-                                alt={`Product ${index + 1}`}
-                                className="w-full h-24 object-cover rounded-lg"
-                              />
-                            ) : (
-                              <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                                <ImageIcon className="w-8 h-8 text-gray-400" />
-                              </div>
-                            )}
+                            <img
+                              src={image}
+                              alt={`Product ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
                             <button
-                              type="button"
                               onClick={() => removeImage(index)}
                               className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                             >
@@ -1509,26 +1456,18 @@ const ProductsPage = () => {
                             </button>
                           </div>
                         ))}
-                        {newProduct.images.length < 4 && (
-                          <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400">
+                        {newProduct.images.length < 8 && (
+                          <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500">
                             <input
                               type="file"
+                              className="hidden"
                               accept="image/*"
                               onChange={handleImageUpload}
-                              className="hidden"
                             />
-                            <div className="text-center">
-                              <Upload className="w-6 h-6 mx-auto text-gray-400" />
-                              <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
-                                Upload Image
-                              </span>
-                            </div>
+                            <Plus className="w-6 h-6 text-gray-400" />
                           </label>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Upload up to 4 images. First image will be used as the main product image.
-                      </p>
                     </div>
 
                     {/* Additional Information */}
@@ -1661,9 +1600,8 @@ const ProductsPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 flex justify-end space-x-3">
                     <button
-                      type="button"
                       onClick={() => {
                         setEditingProduct(null);
                         setNewProduct({
@@ -1692,13 +1630,13 @@ const ProductsPage = () => {
                           returnPolicy: ''
                         });
                       }}
-                      className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
                     >
                       Update Product
                     </button>

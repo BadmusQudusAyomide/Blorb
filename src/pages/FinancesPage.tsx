@@ -254,142 +254,142 @@ const FinancesPage = () => {
   }, [payoutSuccess]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
+    <div className="min-h-screen bg-white">
       <Sidebar />
       <TopBar />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Finances</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your finances and track your earnings</p>
+            <h2 className="text-2xl font-bold text-blue-900">Finances</h2>
+            <p className="text-sm text-gray-600">Manage your finances and track your earnings</p>
           </div>
           
           {error && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-md">
+            <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
               {error}
-                  </div>
-                )}
+            </div>
+          )}
 
           {payoutSuccess && (
-            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-md">
+            <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-md">
               Payout request submitted successfully
             </div>
           )}
 
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
-              <div className="flex items-center justify-between">
-                  <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalRevenue)}</p>
-                  </div>
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                  <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-          </div>
-            
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
+            <div className="bg-white rounded-lg shadow border border-blue-100 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Available Balance</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(availableBalance)}</p>
-                  </div>
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                  <Wallet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  </div>
+                  <p className="text-sm text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalRevenue)}</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow border border-blue-100 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Available Balance</p>
+                  <p className="text-2xl font-bold text-blue-900">{formatCurrency(availableBalance)}</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <Wallet className="w-6 h-6 text-blue-600" />
+                </div>
               </div>
             </div>
           </div>
           
           {/* Payout Request Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-800">
+          <div className="bg-white rounded-lg shadow border border-blue-100 mb-6">
             <div className="p-4 md:p-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Request Payout</h3>
+              <h3 className="text-lg font-medium text-blue-900 mb-4">Request Payout</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Bank Account
                   </label>
                   <input
                     type="text"
                     value={bankAccount?.accountNumber || ''}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+                    className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <p className="text-sm text-gray-600 mb-2">
                     Available for payout: {formatCurrency(availableBalance)}
                   </p>
-              <button
+                  <button
                     onClick={handlePayoutRequest}
                     disabled={loading || !bankAccount || availableBalance <= 0}
-                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Request Payout'}
-              </button>
-                      </div>
-                    </div>
-                  </div>
+                  </button>
                 </div>
-                
-                {/* Transactions Table */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-800">
-            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Transactions</h3>
+              </div>
             </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          </div>
+                
+          {/* Transactions Table */}
+          <div className="bg-white rounded-lg shadow border border-blue-100 overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-blue-100">
+              <h3 className="text-lg font-medium text-blue-900">Recent Transactions</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-blue-100">
+                <thead className="bg-blue-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Description
                     </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                      {transactions.map((transaction) => (
-                    <tr key={transaction.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(transaction.date)}
-                          </td>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-blue-100">
+                  {transactions.map((transaction) => (
+                    <tr key={transaction.id} className="hover:bg-blue-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(transaction.date)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(transaction.type)}`}>
-                              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
-                            </span>
-                          </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {formatCurrency(transaction.amount)}
-                          </td>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(transaction.type)}`}>
+                          {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-900">
+                        {formatCurrency(transaction.amount)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(transaction.status)}`}>
-                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                            </span>
-                          </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(transaction.status)}`}>
+                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {transaction.description}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </main>

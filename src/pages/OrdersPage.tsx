@@ -331,7 +331,7 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
+    <div className="min-h-screen bg-white">
       <Sidebar />
       <TopBar />
       
@@ -339,22 +339,22 @@ const OrdersPage = () => {
         <div className="p-4 md:p-6">
           {/* Header */}
           <div className="mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Orders</h2>
-              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+              <h2 className="text-xl md:text-2xl font-bold text-blue-900">Orders</h2>
+              <p className="text-sm md:text-base text-gray-600">
               Manage your orders
             </p>
           </div>
           
           {/* Tabs */}
           <div className="mb-6">
-            <div className="border-b border-gray-200 dark:border-gray-800">
+            <div className="border-b border-blue-100">
               <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`${
                     activeTab === 'all'
-                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   All Orders
@@ -363,8 +363,8 @@ const OrdersPage = () => {
                   onClick={() => setActiveTab('pending')}
                   className={`${
                     activeTab === 'pending'
-                      ? 'border-yellow-500 text-yellow-600 dark:text-yellow-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Pending
@@ -373,8 +373,8 @@ const OrdersPage = () => {
                   onClick={() => setActiveTab('approved')}
                   className={`${
                     activeTab === 'approved'
-                      ? 'border-green-500 text-green-600 dark:text-green-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Approved
@@ -383,8 +383,8 @@ const OrdersPage = () => {
                   onClick={() => setActiveTab('rejected')}
                   className={`${
                     activeTab === 'rejected'
-                      ? 'border-red-500 text-red-600 dark:text-red-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Rejected
@@ -402,7 +402,7 @@ const OrdersPage = () => {
               <input
                 type="text"
                 placeholder="Search orders..."
-                className="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                className="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-blue-100 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -410,48 +410,48 @@ const OrdersPage = () => {
           </div>
           
           {/* Orders Table */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="bg-white rounded-lg shadow border border-blue-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+              <table className="min-w-full divide-y divide-blue-100">
+                <thead className="bg-blue-50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Order
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Product
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Items
                     </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Total
                     </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                <tbody className="bg-white divide-y divide-blue-100">
                   {currentOrders.length > 0 ? (
                     currentOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
+                      <tr key={order.id} className="hover:bg-blue-50 transition-colors duration-150">
                         <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                          <div className="text-sm font-medium text-blue-600">
                             #{order.orderNumber}
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-800 dark:text-gray-200">
+                          <div className="text-sm text-gray-900">
                             {order.sellerItems[user?.uid || '']?.map((item: OrderItem, index) => (
                               <div key={item.id || index} className="flex items-center">
                                 <span>{item.name}</span>
@@ -459,10 +459,10 @@ const OrdersPage = () => {
                             ))}
                           </div>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                           {order.buyerName}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                           {order.createdAt.toDate().toLocaleDateString()}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
@@ -473,16 +473,16 @@ const OrdersPage = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                           {Object.keys(order.items).length}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-800 dark:text-gray-200">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                           ₦{order.total.toFixed(2)}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button 
                             onClick={() => viewOrderDetails(order.id)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           >
                             View Details
                           </button>
@@ -491,7 +491,7 @@ const OrdersPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
                         No orders found.
                       </td>
                     </tr>
@@ -502,9 +502,9 @@ const OrdersPage = () => {
             
             {/* Pagination */}
             {filteredOrders.length > 0 && (
-              <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <div className="px-4 py-4 border-t border-blue-100 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-gray-700">
                     Showing <span className="font-medium">{indexOfFirstOrder + 1}</span> to{' '}
                     <span className="font-medium">{Math.min(indexOfLastOrder, filteredOrders.length)}</span> of{' '}
                     <span className="font-medium">{filteredOrders.length}</span> results
@@ -514,14 +514,14 @@ const OrdersPage = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+                    className="px-3 py-1 border border-blue-100 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 disabled:opacity-50"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+                    className="px-3 py-1 border border-blue-100 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 disabled:opacity-50"
                   >
                     Next
                   </button>
@@ -533,14 +533,14 @@ const OrdersPage = () => {
           {/* Order Details Modal */}
           {selectedOrder && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-6">
                   <div>
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      <h3 className="text-xl font-semibold text-blue-900">
                         Order #{selectedOrder.orderNumber}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-gray-500 mt-1">
                         {selectedOrder.createdAt.toDate().toLocaleString()}
                     </p>
                   </div>
@@ -550,7 +550,7 @@ const OrdersPage = () => {
                       <button
                             onClick={() => handleOrderStatusUpdate(selectedOrder.id, 'approved')}
                             disabled={processingOrder === selectedOrder.id}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                           >
                             {processingOrder === selectedOrder.id ? (
                               'Processing...'
@@ -579,7 +579,7 @@ const OrdersPage = () => {
                       )}
                       <button
                         onClick={() => setSelectedOrder(null)}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        className="inline-flex items-center px-3 py-2 border border-blue-100 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         Close
                       </button>
@@ -589,19 +589,19 @@ const OrdersPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Order Information */}
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white mb-4">Order Information</h4>
+                      <h4 className="font-medium text-blue-900 mb-4">Order Information</h4>
                       <div className="space-y-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                           <span className="font-medium">Date:</span> {selectedOrder.createdAt.toDate().toLocaleString()}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                           <span className="font-medium">Status:</span>{' '}
                           <span className={`px-2 py-1 rounded-full text-xs ${getStatusClass(selectedOrder.sellerStatuses[user?.uid || '']?.status || 'pending')}`}>
                             {selectedOrder.sellerStatuses[user?.uid || '']?.status?.charAt(0).toUpperCase() + 
                              selectedOrder.sellerStatuses[user?.uid || '']?.status?.slice(1) || 'Pending'}
                           </span>
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                           <span className="font-medium">Total:</span> ₦{selectedOrder.total.toFixed(2)}
                         </p>
                       </div>
@@ -609,15 +609,15 @@ const OrdersPage = () => {
 
                     {/* Customer Information */}
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white mb-4">Customer Information</h4>
+                      <h4 className="font-medium text-blue-900 mb-4">Customer Information</h4>
                       <div className="space-y-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                           <span className="font-medium">Name:</span> {selectedOrder.buyerName}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                           <span className="font-medium">Email:</span> {selectedOrder.buyerEmail}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                           <span className="font-medium">Phone:</span> {selectedOrder.shippingInfo.phone}
                         </p>
                       </div>
@@ -625,34 +625,34 @@ const OrdersPage = () => {
 
                     {/* Order Items */}
                     <div className="md:col-span-2">
-                      <h4 className="font-medium text-gray-900 dark:text-white mb-4">Order Items</h4>
+                      <h4 className="font-medium text-blue-900 mb-4">Order Items</h4>
                       <div className="space-y-4">
                         {selectedOrder.sellerItems[user?.uid || '']?.map((item: OrderItem) => (
-                          <div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <div key={item.id} className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg">
                             <img
                               src={item.images?.[0]}
                               alt={item.name}
                               className="w-20 h-20 object-cover rounded"
                             />
                             <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
+                              <p className="font-medium text-blue-900">{item.name}</p>
                               <div className="mt-1 space-y-1">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-sm text-gray-600">
                                   Quantity: {item.quantity}
                                 </p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-sm text-gray-600">
                                   Price: ₦{item.price.toFixed(2)}
                                 </p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-sm text-gray-600">
                                   Subtotal: ₦{(item.price * item.quantity).toFixed(2)}
                                 </p>
                                 {item.selectedColor && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  <p className="text-sm text-gray-600">
                                     Color: {item.selectedColor}
                                   </p>
                                 )}
                                 {item.selectedSize && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  <p className="text-sm text-gray-600">
                                     Size: {item.selectedSize}
                                   </p>
                                 )}
@@ -665,19 +665,19 @@ const OrdersPage = () => {
 
                     {/* Status History */}
                     <div className="md:col-span-2">
-                      <h4 className="font-medium text-gray-900 dark:text-white mb-4">Status History</h4>
+                      <h4 className="font-medium text-blue-900 mb-4">Status History</h4>
                       <div className="space-y-2">
                         {selectedOrder.statusHistory.map((status, index) => (
-                          <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <div key={index} className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg">
                             <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white">
+                              <p className="font-medium text-blue-900">
                                 {status.status.charAt(0).toUpperCase() + status.status.slice(1)}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-gray-600">
                                 {new Date(status.timestamp).toLocaleString()}
                               </p>
                               {status.notes && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-sm text-gray-600">
                                   {status.notes}
                                 </p>
                               )}

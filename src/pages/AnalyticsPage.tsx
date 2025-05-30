@@ -1,370 +1,283 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase.config';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs,
+  Timestamp,
+  onSnapshot,
+  QuerySnapshot
+} from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
+import { 
+  TrendingUp, 
+  ShoppingBag, 
+  Users, 
+  DollarSign,
+  ArrowUp,
+  ArrowDown,
+  Calendar,
+  Filter
+} from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { 
-  BarChart2 as BarChartIcon,
-  ShoppingCart,
-  Users,
-  DollarSign,
-  Package,
-  TrendingUp,
-  Calendar,
-  Download,
-  Filter,
-  ChevronDown
-} from 'lucide-react';
-import { useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Pie,
-  Cell
-} from 'recharts';
+import { formatCurrency, formatDate } from '../utils/formatters';
+
+interface Order {
+  id: string;
+  total: number;
+  createdAt: Timestamp;
+  status: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  category: string;
+  images: string[];
+  sellerId: string;
+  createdAt: Date;
+}
+
+interface StatCard {
+  title: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down';
+  icon: React.ReactNode;
+}
 
 const AnalyticsPage = () => {
-  const [activeTab, setActiveTab] = useState('sales');
-  const [timeRange, setTimeRange] = useState('30d');
- 
-  // Mock data
-  const salesData = [
-    { name: 'Jan', revenue: 5000 },
-    { name: 'Feb', revenue: 8000 },
-    { name: 'Mar', revenue: 12000 },
-    { name: 'Apr', revenue: 6000 },
-    { name: 'May', revenue: 9000 },
-    { name: 'Jun', revenue: 15000 },
-    { name: 'Jul', revenue: 18000 }
-  ];
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [stats, setStats] = useState<StatCard[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const customerData = [
-    { name: 'New', value: 120, color: '#4F46E5' },
-    { name: 'Returning', value: 85, color: '#10B981' },
-    { name: 'Inactive', value: 45, color: '#6B7280' }
-  ];
+  // Fetch orders
+  useEffect(() => {
+    if (!user?.uid) return;
 
-  const productPerformance = [
-    { name: 'Wireless Headphones', sales: 245, revenue: 12250 },
-    { name: 'Smart Watch', sales: 189, revenue: 9450 },
-    { name: 'Bluetooth Speaker', sales: 156, revenue: 7800 },
-    { name: 'Phone Case', sales: 132, revenue: 1980 },
-    { name: 'USB Cable', sales: 98, revenue: 490 }
-  ];
+    setLoading(true);
+    setError(null);
 
-  const stats = [
-    { title: "Total Revenue", value: "#24,560", change: "+18%", icon: <DollarSign className="w-5 h-5 text-green-600" /> },
-    { title: "Total Orders", value: "1,245", change: "+12%", icon: <ShoppingCart className="w-5 h-5 text-indigo-600" /> },
-    { title: "New Customers", value: "342", change: "+5%", icon: <Users className="w-5 h-5 text-blue-600" /> },
-    { title: "Avg. Order Value", value: "#1,980", change: "+4%", icon: <TrendingUp className="w-5 h-5 text-purple-600" /> }
-  ];
+    const ordersRef = collection(db, 'orders');
+    const ordersQuery = query(
+      ordersRef,
+      where('sellerIds', 'array-contains', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeOrders = onSnapshot(ordersQuery,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const ordersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Order[];
+        setOrders(ordersData);
+      },
+      (error: Error) => {
+        console.error('Error fetching orders:', error);
+        setError('Failed to fetch orders');
+      }
+    );
+
+    return () => {
+      unsubscribeOrders();
+    };
+  }, [user?.uid]);
+
+  // Fetch products
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const productsRef = collection(db, 'products');
+    const productsQuery = query(
+      productsRef,
+      where('sellerId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeProducts = onSnapshot(productsQuery,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const productsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Product[];
+        setProducts(productsData);
+      },
+      (error: Error) => {
+        console.error('Error fetching products:', error);
+        setError('Failed to fetch products');
+      }
+    );
+
+    return () => {
+      unsubscribeProducts();
+    };
+  }, [user?.uid]);
+
+  // Calculate statistics
+  useEffect(() => {
+    if (!orders.length || !products.length) return;
+
+    const now = new Date();
+    const timeRanges = {
+      '7d': new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      '30d': new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      '90d': new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),
+      '1y': new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+    };
+
+    const startDate = timeRanges[timeRange];
+
+    // Filter orders within time range
+    const recentOrders = orders.filter(order => 
+      order.createdAt.toDate() >= startDate
+    );
+
+    // Calculate metrics
+    const totalRevenue = recentOrders.reduce((sum, order) => sum + order.total, 0);
+    const totalOrders = recentOrders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const totalProducts = products.length;
+
+    // Calculate previous period metrics for comparison
+    const previousStartDate = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
+    const previousOrders = orders.filter(order => 
+      order.createdAt.toDate() >= previousStartDate && 
+      order.createdAt.toDate() < startDate
+    );
+
+    const previousRevenue = previousOrders.reduce((sum, order) => sum + order.total, 0);
+    const previousOrdersCount = previousOrders.length;
+    const previousAverageOrderValue = previousOrdersCount > 0 ? previousRevenue / previousOrdersCount : 0;
+
+    // Calculate percentage changes
+    const revenueChange = previousRevenue ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    const ordersChange = previousOrdersCount ? ((totalOrders - previousOrdersCount) / previousOrdersCount) * 100 : 0;
+    const aovChange = previousAverageOrderValue ? ((averageOrderValue - previousAverageOrderValue) / previousAverageOrderValue) * 100 : 0;
+
+    setStats([
+      {
+        title: 'Total Revenue',
+        value: formatCurrency(totalRevenue),
+        change: `${Math.abs(revenueChange).toFixed(1)}%`,
+        trend: revenueChange >= 0 ? 'up' : 'down',
+        icon: <DollarSign className="w-6 h-6 text-blue-600" />
+      },
+      {
+        title: 'Total Orders',
+        value: totalOrders.toString(),
+        change: `${Math.abs(ordersChange).toFixed(1)}%`,
+        trend: ordersChange >= 0 ? 'up' : 'down',
+        icon: <ShoppingBag className="w-6 h-6 text-blue-600" />
+      },
+      {
+        title: 'Average Order Value',
+        value: formatCurrency(averageOrderValue),
+        change: `${Math.abs(aovChange).toFixed(1)}%`,
+        trend: aovChange >= 0 ? 'up' : 'down',
+        icon: <TrendingUp className="w-6 h-6 text-blue-600" />
+      },
+      {
+        title: 'Total Products',
+        value: totalProducts.toString(),
+        change: '0%',
+        trend: 'up',
+        icon: <Users className="w-6 h-6 text-blue-600" />
+      }
+    ]);
+
+    setLoading(false);
+  }, [orders, products, timeRange]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
+    <div className="min-h-screen bg-white">
       <Sidebar />
       <TopBar />
       
-      <main className={`pt-16 transition-all duration-300 ease-in-out`}>
+      <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">
-          <div className="mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-1 md:mb-2">Analytics Dashboard</h2>
-            <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">Track and analyze your store's performance</p>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-blue-900">Analytics</h2>
+            <p className="text-sm text-gray-600">Track your store's performance and growth</p>
           </div>
-          
-          {/* Time range selector */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3 md:gap-4">
-            <div className="flex flex-wrap gap-2">
-              <button 
-                className={`px-2 py-1 text-xs md:text-sm rounded-md ${timeRange === '7d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
-                onClick={() => setTimeRange('7d')}
-              >
-                7D
-              </button>
-              <button 
-                className={`px-2 py-1 text-xs md:text-sm rounded-md ${timeRange === '30d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
-                onClick={() => setTimeRange('30d')}
-              >
-                30D
-              </button>
-              <button 
-                className={`px-2 py-1 text-xs md:text-sm rounded-md ${timeRange === '90d' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
-                onClick={() => setTimeRange('90d')}
-              >
-                90D
-              </button>
-              <button 
-                className={`px-2 py-1 text-xs md:text-sm rounded-md ${timeRange === '12m' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
-                onClick={() => setTimeRange('12m')}
-              >
-                12M
-              </button>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
+              {error}
             </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <button className="flex items-center space-x-1 px-2 md:px-3 py-1 md:py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-xs md:text-sm">
-                <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                <span>Custom Range</span>
-              </button>
-              
-              <button className="flex items-center space-x-1 px-2 md:px-3 py-1 md:py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-xs md:text-sm">
-                <Filter className="w-3 h-3 md:w-4 md:h-4" />
-                <span>Filters</span>
-              </button>
-              
-              <button className="flex items-center space-x-1 px-2 md:px-3 py-1 md:py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-xs md:text-sm">
-                <Download className="w-3 h-3 md:w-4 md:h-4" />
-                <span>Export</span>
-              </button>
+          )}
+
+          {/* Time Range Selector */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">Time Range:</span>
+            </div>
+            <div className="flex space-x-2">
+              {(['7d', '30d', '90d', '1y'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-3 py-1 text-sm font-medium rounded-md ${
+                    timeRange === range
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                  }`}
+                >
+                  {range}
+                </button>
+              ))}
             </div>
           </div>
-          
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {stats.map((stat, index) => (
-              <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 md:p-6 border border-gray-200 dark:border-gray-800 transition-all duration-150 hover:shadow-md">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
-                    <p className="text-lg md:text-2xl font-semibold text-gray-800 dark:text-white mt-1">{stat.value}</p>
-                    <p className="text-xs md:text-sm text-green-600 dark:text-green-400 mt-1">{stat.change}</p>
-                  </div>
-                  <div className="p-1 md:p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30">
+              <div key={index} className="bg-white rounded-lg shadow border border-blue-100 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-blue-50 rounded-full">
                     {stat.icon}
                   </div>
+                  <div className={`flex items-center ${
+                    stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {stat.trend === 'up' ? (
+                      <ArrowUp className="w-4 h-4 mr-1" />
+                    ) : (
+                      <ArrowDown className="w-4 h-4 mr-1" />
+                    )}
+                    <span className="text-sm font-medium">{stat.change}</span>
+                  </div>
                 </div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">{stat.title}</h3>
+                <p className="text-2xl font-bold text-blue-900">{stat.value}</p>
               </div>
             ))}
           </div>
-          
-          {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-800 mb-4 md:mb-6 overflow-x-auto">
-            <nav className="-mb-px flex space-x-4 md:space-x-8 min-w-max">
-              <button
-                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'sales' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                onClick={() => setActiveTab('sales')}
-              >
-                <div className="flex items-center">
-                  <BarChartIcon className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  Sales Overview
-                </div>
-              </button>
-              <button
-                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'customers' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                onClick={() => setActiveTab('customers')}
-              >
-                <div className="flex items-center">
-                  <Users className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  Customer Insights
-                </div>
-              </button>
-              <button
-                className={`whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === 'products' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                onClick={() => setActiveTab('products')}
-              >
-                <div className="flex items-center">
-                  <Package className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  Product Performance
-                </div>
-              </button>
-            </nav>
-          </div>
-          
-          {/* Tab Content */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 md:p-6 mb-6 md:mb-8">
-            {activeTab === 'sales' && (
-              <div>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-white">Sales Performance</h3>
-                  <div className="flex items-center space-x-2">
-                    <button className="flex items-center text-xs md:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                      <span>By Revenue</span>
-                      <ChevronDown className="w-3 h-3 md:w-4 md:h-4 ml-1" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="h-64 sm:h-80 bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={salesData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="name" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="#4F46E5" 
-                        strokeWidth={2}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4 h-56 md:h-64">
-                    <h4 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 md:mb-3">Revenue by Category</h4>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={customerData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={70}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {customerData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4 h-56 md:h-64">
-                    <h4 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 md:mb-3">Order Volume</h4>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="name" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <Tooltip />
-                        <Bar dataKey="revenue" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {activeTab === 'customers' && (
-              <div>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-white">Customer Insights</h3>
-                  <div className="flex items-center space-x-2">
-                    <button className="flex items-center text-xs md:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                      <span>By Customer Type</span>
-                      <ChevronDown className="w-3 h-3 md:w-4 md:h-4 ml-1" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4 h-56 md:h-64 lg:col-span-2">
-                    <h4 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 md:mb-3">Customer Acquisition</h4>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="name" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <Tooltip />
-                        <Line 
-                          type="monotone" 
-                          dataKey="revenue" 
-                          stroke="#10B981" 
-                          strokeWidth={2}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4 h-56 md:h-64">
-                    <h4 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 md:mb-3">Customer Segments</h4>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={customerData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={70}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {customerData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4 h-56 md:h-64">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 md:mb-3">Customer Lifetime Value</h4>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="name" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip />
-                      <Bar dataKey="revenue" fill="#7C3AED" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-            
-            {activeTab === 'products' && (
-              <div>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-white">Product Performance</h3>
-                  <div className="flex items-center space-x-2">
-                    <button className="flex items-center text-xs md:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                      <span>By Revenue</span>
-                      <ChevronDown className="w-3 h-3 md:w-4 md:h-4 ml-1" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 md:p-4 h-64 md:h-80 mb-4 md:mb-6">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 md:mb-3">Top Selling Products</h4>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={productPerformance}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="name" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip />
-                      <Bar dataKey="revenue" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="px-3 py-2 md:px-6 md:py-3 text-left text-xs md:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Product</th>
-                        <th className="px-3 py-2 md:px-6 md:py-3 text-left text-xs md:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Units Sold</th>
-                        <th className="px-3 py-2 md:px-6 md:py-3 text-left text-xs md:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revenue</th>
-                        <th className="px-3 py-2 md:px-6 md:py-3 text-left text-xs md:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">% of Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                      {productPerformance.map((product, index) => (
-                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="px-3 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900 dark:text-white">{product.name}</td>
-                          <td className="px-3 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">{product.sales}</td>
-                          <td className="px-3 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">₦{product.revenue.toLocaleString()}</td>
-                          <td className="px-3 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                            {Math.round((product.revenue / 32430) * 100)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+
+          {/* Coming Soon Message */}
+          <div className="bg-white rounded-lg shadow border border-blue-100 p-6 text-center">
+            <h3 className="text-lg font-medium text-blue-900 mb-2">More Analytics Coming Soon</h3>
+            <p className="text-gray-600">
+              We're working on adding more detailed analytics including:
+            </p>
+            <ul className="mt-4 text-gray-600 space-y-2">
+              <li>• Sales trends and forecasting</li>
+              <li>• Customer behavior analysis</li>
+              <li>• Product performance metrics</li>
+              <li>• Marketing campaign effectiveness</li>
+              <li>• Inventory turnover rates</li>
+            </ul>
           </div>
         </div>
       </main>

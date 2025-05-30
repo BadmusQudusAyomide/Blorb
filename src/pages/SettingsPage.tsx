@@ -24,6 +24,31 @@ interface BankAccount {
   isDefault: boolean;
 }
 
+interface FormData {
+  name: string;
+  email: string;
+  phone: string;
+  storeName: string;
+  storeLogo: string;
+  storeBanner: string;
+  businessAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  businessType: string;
+  taxId: string;
+  socialMedia: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  };
+  storeDescription?: string;
+}
+
 const SettingsPage = () => {
   const { seller, updateSellerProfile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -40,29 +65,24 @@ const SettingsPage = () => {
       isDefault: true
     }] : []
   );
-
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: seller?.name || '',
     email: seller?.email || '',
     phone: seller?.phone || '',
     storeName: seller?.storeName || '',
     storeLogo: seller?.storeLogo || '',
     storeBanner: seller?.storeBanner || '',
-    businessAddress: {
-      street: seller?.businessAddress?.street || '',
-      city: seller?.businessAddress?.city || '',
-      state: seller?.businessAddress?.state || '',
-      country: seller?.businessAddress?.country || '',
-      zipCode: seller?.businessAddress?.zipCode || ''
+    businessAddress: seller?.businessAddress || {
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: ''
     },
     businessType: seller?.businessType || '',
     taxId: seller?.taxId || '',
-    socialMedia: {
-      website: seller?.socialMedia?.website || '',
-      facebook: seller?.socialMedia?.facebook || '',
-      instagram: seller?.socialMedia?.instagram || '',
-      twitter: seller?.socialMedia?.twitter || ''
-    }
+    socialMedia: seller?.socialMedia || {},
+    storeDescription: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -99,16 +119,17 @@ const SettingsPage = () => {
       accountName: '',
       isDefault: bankAccounts.length === 0
     };
-    setBankAccounts(prev => [...prev, newAccount]);
+    setBankAccounts([...bankAccounts, newAccount]);
   };
 
   const removeBankAccount = (id: string) => {
     setBankAccounts(prev => {
-      const filtered = prev.filter(account => account.id !== id);
-      if (filtered.length > 0 && !filtered.some(account => account.isDefault)) {
-        filtered[0].isDefault = true;
+      const newAccounts = prev.filter(account => account.id !== id);
+      // If we removed the default account and there are other accounts, make the first one default
+      if (newAccounts.length > 0 && !newAccounts.some(account => account.isDefault)) {
+        newAccounts[0].isDefault = true;
       }
-      return filtered;
+      return newAccounts;
     });
   };
 
@@ -145,28 +166,24 @@ const SettingsPage = () => {
     setSuccess(null);
 
     try {
-      // Convert bank accounts to the format expected by the API
-      const bankDetails = bankAccounts.find(account => account.isDefault) || bankAccounts[0];
+      // Get the default bank account
+      const defaultBankAccount = bankAccounts.find(account => account.isDefault);
       
-      // Only include bankDetails if there are bank accounts
+      // Prepare the data to update
       const updateData = {
         ...formData,
-        ...(bankDetails && {
-          bankDetails: {
-            bankName: bankDetails.bankName,
-            accountNumber: bankDetails.accountNumber,
-            accountName: bankDetails.accountName
-          }
-        })
+        bankDetails: defaultBankAccount ? {
+          bankName: defaultBankAccount.bankName,
+          accountNumber: defaultBankAccount.accountNumber,
+          accountName: defaultBankAccount.accountName
+        } : null
       };
       
       await updateSellerProfile(updateData);
-      
-      setSuccess('Profile updated successfully');
+      setSuccess('Settings updated successfully');
       setEditMode(null);
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError('Failed to update profile');
+    } catch (error) {
+      setError('Failed to update settings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -193,491 +210,324 @@ const SettingsPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
+    <div className="min-h-screen bg-white">
       <Sidebar />
       <TopBar />
       
-      <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
-        <div className="p-4 md:p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Settings</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account settings and preferences</p>
+      <main className="pt-16 pl-0 lg:pl-64">
+        <div className="p-6">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-blue-900">Settings</h2>
+            <p className="text-gray-600">Manage your account settings and preferences</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-md">
+            <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
               {error}
                   </div>
           )}
 
           {success && (
-            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-md">
+            <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-md">
               {success}
                 </div>
           )}
 
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800">
-            <div className="grid grid-cols-1 md:grid-cols-4">
-              {/* Sidebar */}
-              <div className="md:border-r border-gray-200 dark:border-gray-800 p-4">
-                <nav className="space-y-1">
-                  {tabs.map(tab => (
+          <div className="bg-white rounded-lg shadow border border-blue-100">
+            <div className="border-b border-blue-100">
+              <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className={`${
+                    activeTab === 'profile'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Profile
+                </button>
+                <button
+                  onClick={() => setActiveTab('store')}
+                  className={`${
+                    activeTab === 'store'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Store
+                </button>
+                <button
+                  onClick={() => setActiveTab('banking')}
+                  className={`${
+                    activeTab === 'banking'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Banking
+                </button>
                     <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium ${
-                        activeTab === tab.id
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      {tab.icon}
-                      <span>{tab.label}</span>
+                  onClick={() => setActiveTab('notifications')}
+                  className={`${
+                    activeTab === 'notifications'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Notifications
                     </button>
-                  ))}
                 </nav>
               </div>
 
-              {/* Content */}
-              <div className="md:col-span-3 p-4 md:p-6">
-                <form onSubmit={handleSubmit}>
+            <div className="p-6">
                   {activeTab === 'profile' && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Profile Information</h3>
-                        {editMode !== 'profile' && renderEditButton('profile')}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-blue-900">Profile Information</h3>
+                    {renderEditButton('profile')}
                       </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Full Name
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                         <input
                           type="text"
                           name="name"
-                          value={formData.name}
+                        value={formData.name || ''}
                           onChange={handleInputChange}
-                          placeholder="Enter your full name"
-                          disabled={editMode !== 'profile'}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                          required
+                        className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Email
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input
                           type="email"
                           name="email"
-                          value={formData.email}
+                        value={formData.email || ''}
                           onChange={handleInputChange}
-                          placeholder="Enter your email address"
-                          disabled={editMode !== 'profile'}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                          required
+                        className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Phone Number
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input
                           type="tel"
                           name="phone"
-                          value={formData.phone}
+                        value={formData.phone || ''}
                           onChange={handleInputChange}
-                          placeholder="Enter your phone number"
-                          disabled={editMode !== 'profile'}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                          required
-                        />
-                      </div>
-                      {editMode === 'profile' && (
-                        <div className="flex justify-end space-x-3">
-                          <button
-                            type="button"
-                            onClick={() => setEditMode(null)}
-                            className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                          >
-                            {loading ? 'Saving...' : 'Save Changes'}
-                          </button>
-                        </div>
-                      )}
+                        className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
                     </div>
                   )}
 
                   {activeTab === 'store' && (
-                    <div className="space-y-4">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-blue-900">Store Information</h3>
+                    {renderEditButton('store')}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Store Name
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
                         <input
                           type="text"
                           name="storeName"
-                          value={formData.storeName}
+                        value={formData.storeName || ''}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          required
+                        className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Store Logo
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
+                      <select
+                        name="businessType"
+                        value={formData.businessType || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Business Type</option>
+                        <option value="individual">Individual</option>
+                        <option value="company">Company</option>
+                        <option value="partnership">Partnership</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store Description</label>
+                      <textarea
+                        name="storeDescription"
+                        value={formData.storeDescription || ''}
+                        onChange={handleInputChange}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store Logo</label>
                         <div className="mt-1 flex items-center space-x-4">
                           {formData.storeLogo && (
                             <img
                               src={formData.storeLogo}
                               alt="Store Logo"
-                              className="w-16 h-16 object-cover rounded-md"
+                            className="h-20 w-20 object-cover rounded-lg"
                             />
                           )}
-                          <label className="cursor-pointer">
-                            <span className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload Logo
-                            </span>
                             <input
                               type="file"
-                              className="hidden"
                               accept="image/*"
                               onChange={(e) => handleImageUpload(e, 'storeLogo')}
+                          className="hidden"
+                          id="storeLogo"
                             />
+                        <label
+                          htmlFor="storeLogo"
+                          className="px-4 py-2 border border-blue-100 rounded-md text-sm font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                        >
+                          Upload Logo
                           </label>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Store Banner
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store Banner</label>
                         <div className="mt-1 flex items-center space-x-4">
                           {formData.storeBanner && (
                             <img
                               src={formData.storeBanner}
                               alt="Store Banner"
-                              className="w-32 h-16 object-cover rounded-md"
+                            className="h-32 w-full object-cover rounded-lg"
                             />
                           )}
-                          <label className="cursor-pointer">
-                            <span className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload Banner
-                            </span>
                             <input
                               type="file"
-                              className="hidden"
                               accept="image/*"
                               onChange={(e) => handleImageUpload(e, 'storeBanner')}
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'address' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Street Address
-                        </label>
-                        <input
-                          type="text"
-                          name="businessAddress.street"
-                          value={formData.businessAddress.street}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          required
+                          className="hidden"
+                          id="storeBanner"
                         />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            City
-                          </label>
-                          <input
-                            type="text"
-                            name="businessAddress.city"
-                            value={formData.businessAddress.city}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            State
-                          </label>
-                          <input
-                            type="text"
-                            name="businessAddress.state"
-                            value={formData.businessAddress.state}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Country
-                          </label>
-                          <input
-                            type="text"
-                            name="businessAddress.country"
-                            value={formData.businessAddress.country}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            ZIP Code
-                          </label>
-                          <input
-                            type="text"
-                            name="businessAddress.zipCode"
-                            value={formData.businessAddress.zipCode}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'business' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Business Type
-                        </label>
-                        <select
-                          name="businessType"
-                          value={formData.businessType}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          required
+                        <label
+                          htmlFor="storeBanner"
+                          className="px-4 py-2 border border-blue-100 rounded-md text-sm font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                         >
-                          <option value="">Select Business Type</option>
-                          <option value="individual">Individual</option>
-                          <option value="partnership">Partnership</option>
-                          <option value="corporation">Corporation</option>
-                          <option value="llc">LLC</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Tax ID
+                          Upload Banner
                         </label>
-                        <input
-                          type="text"
-                          name="taxId"
-                          value={formData.taxId}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          required
-                        />
+                      </div>
+                    </div>
                       </div>
                     </div>
                   )}
 
                   {activeTab === 'banking' && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Banking Details</h3>
-                        {editMode !== 'banking' && renderEditButton('banking')}
-                      </div>
-                      
-                      {bankAccounts.map((account, index) => (
-                        <div key={account.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
-                          <div className="flex justify-between items-center">
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Bank Account {index + 1}
-                              {account.isDefault && (
-                                <span className="ml-2 px-2 py-1 text-xs font-medium text-green-800 bg-green-100 dark:bg-green-900/30 dark:text-green-200 rounded-full">
-                                  Default
-                                </span>
-                              )}
-                            </h4>
-                            {editMode === 'banking' && bankAccounts.length > 1 && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-blue-900">Bank Accounts</h3>
                               <button
-                                type="button"
-                                onClick={() => removeBankAccount(account.id)}
-                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      onClick={addBankAccount}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                               >
-                                <Trash2 className="w-4 h-4" />
+                      Add Bank Account
                               </button>
-                            )}
                           </div>
-                          
+                  <div className="space-y-4">
+                    {bankAccounts.map((account) => (
+                      <div key={account.id} className="bg-blue-50 p-4 rounded-lg">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Bank Name
-                              </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
                               <input
                                 type="text"
                                 value={account.bankName}
                                 onChange={(e) => handleBankAccountChange(account.id, 'bankName', e.target.value)}
-                                placeholder="Enter bank name"
-                                disabled={editMode !== 'banking'}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                                required
+                              className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Account Number
-                              </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
                               <input
                                 type="text"
                                 value={account.accountNumber}
                                 onChange={(e) => handleBankAccountChange(account.id, 'accountNumber', e.target.value)}
-                                placeholder="Enter account number"
-                                disabled={editMode !== 'banking'}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                                required
+                              className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Account Name
-                              </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
                               <input
                                 type="text"
                                 value={account.accountName}
                                 onChange={(e) => handleBankAccountChange(account.id, 'accountName', e.target.value)}
-                                placeholder="Enter account name"
-                                disabled={editMode !== 'banking'}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                                required
+                              className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
-                            {!account.isDefault && (
-                              <div className="flex items-end">
+                          <div className="flex items-end space-x-4">
                                 <button
-                                  type="button"
                                   onClick={() => setDefaultBankAccount(account.id)}
-                                  disabled={editMode !== 'banking'}
-                                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
-                                >
-                                  Set as Default
+                              className={`px-4 py-2 border rounded-md text-sm font-medium ${
+                                account.isDefault
+                                  ? 'border-blue-600 text-blue-600 bg-blue-50'
+                                  : 'border-blue-100 text-gray-700 hover:bg-blue-50'
+                              }`}
+                            >
+                              {account.isDefault ? 'Default Account' : 'Set as Default'}
+                            </button>
+                            {bankAccounts.length > 1 && (
+                              <button
+                                onClick={() => removeBankAccount(account.id)}
+                                className="px-4 py-2 text-red-600 hover:text-red-700"
+                              >
+                                Remove
                                 </button>
-                              </div>
                             )}
+                          </div>
                           </div>
               </div>
             ))}
-
-                      {editMode === 'banking' && (
-                        <button
-                          type="button"
-                          onClick={addBankAccount}
-                          className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Bank Account
-                        </button>
-                      )}
-
-                      {editMode === 'banking' && (
-                        <div className="flex justify-end space-x-3 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => setEditMode(null)}
-                            className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                          >
-                            {loading ? 'Saving...' : 'Save Changes'}
-                          </button>
+                  </div>
                 </div>
                       )}
-              </div>
-                  )}
 
-                  {activeTab === 'social' && (
+              {activeTab === 'notifications' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-blue-900">Notification Preferences</h3>
+                    {renderEditButton('notifications')}
+              </div>
               <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Website
-                        </label>
-                        <input
-                          type="url"
-                          name="socialMedia.website"
-                          value={formData.socialMedia.website}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
+                        <h4 className="text-sm font-medium text-blue-900">Order Notifications</h4>
+                        <p className="text-sm text-gray-600">Receive notifications for new orders and updates</p>
                       </div>
-                  <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Facebook
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
-                        <input
-                          type="url"
-                          name="socialMedia.facebook"
-                          value={formData.socialMedia.facebook}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
                   </div>
+                    <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Instagram
-                  </label>
-                        <input
-                          type="url"
-                          name="socialMedia.instagram"
-                          value={formData.socialMedia.instagram}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                </div>
-                  <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Twitter
-                        </label>
-                        <input
-                          type="url"
-                          name="socialMedia.twitter"
-                          value={formData.socialMedia.twitter}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
+                        <h4 className="text-sm font-medium text-blue-900">Marketing Updates</h4>
+                        <p className="text-sm text-gray-600">Receive updates about new features and promotions</p>
                       </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
                     </div>
-                  )}
-
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                    >
-                      {loading ? 'Saving...' : 'Save Changes'}
-                    </button>
                   </div>
-                </form>
               </div>
+              )}
             </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handleSubmit}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Save Changes
+            </button>
           </div>
         </div>
       </main>

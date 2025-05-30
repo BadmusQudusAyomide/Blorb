@@ -1,7 +1,7 @@
+import { useState } from 'react';
+import { Users, ShoppingBag, Search, Mail, Phone, MapPin } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { Users, ShoppingBag, Search } from 'lucide-react';
-import { useState } from 'react';
 
 interface Customer {
   id: string;
@@ -83,15 +83,15 @@ const CustomersPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-150">
+    <div className="min-h-screen bg-white">
       <Sidebar />
       <TopBar />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Customers</h2>
-            <p className="text-gray-600 dark:text-gray-400">View and manage customers who have purchased from your store</p>
+            <h2 className="text-2xl font-bold text-blue-900 mb-2">Customers</h2>
+            <p className="text-gray-600">View and manage customers who have purchased from your store</p>
           </div>
           
           {/* Search and Stats */}
@@ -103,7 +103,7 @@ const CustomersPage = () => {
                 </div>
                 <input
                   type="text"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2 border border-blue-100 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Search customers by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -111,84 +111,92 @@ const CustomersPage = () => {
               </div>
             </div>
             
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-800">
+            <div className="bg-white rounded-lg shadow border border-blue-100 p-4">
               <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 mr-3">
-                  <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <div className="p-2 rounded-lg bg-blue-50 mr-3">
+                  <Users className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Customers</p>
-                  <p className="text-xl font-semibold text-gray-800 dark:text-white">{customers.length}</p>
+                  <p className="text-sm font-medium text-gray-500">Total Customers</p>
+                  <p className="text-xl font-semibold text-blue-900">{customers.length}</p>
                 </div>
               </div>
             </div>
           </div>
           
           {/* Customers Table */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="bg-white rounded-lg shadow border border-blue-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+              <table className="min-w-full divide-y divide-blue-100">
+                <thead className="bg-blue-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Orders
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Total Spent
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Last Order
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                <tbody className="bg-white divide-y divide-blue-100">
                   {filteredCustomers.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
+                    <tr key={customer.id} className="hover:bg-blue-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <img className="h-10 w-10 rounded-full" src={customer.image || `https://ui-avatars.com/api/?name=${customer.name.replace(' ', '+')}&background=random`} alt={customer.name} />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">{customer.name}</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">{customer.location}</div>
+                            <div className="text-sm font-medium text-blue-900">{customer.name}</div>
+                            <div className="text-sm text-gray-500">{customer.location}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">{customer.email}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{customer.phone}</div>
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center text-sm text-gray-900">
+                            <Mail className="w-4 h-4 mr-2 text-blue-600" />
+                            {customer.email}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Phone className="w-4 h-4 mr-2 text-blue-600" />
+                            {customer.phone}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">{customer.totalOrders}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                        <div className="text-sm text-blue-900">{customer.totalOrders}</div>
+                        <div className="text-sm text-gray-500 flex items-center">
                           <ShoppingBag className="w-4 h-4 mr-1" /> orders
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        <div className="text-sm font-medium text-blue-900">
                           ${customer.totalSpent.toFixed(2)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
+                        <div className="text-sm text-gray-900">
                           {new Date(customer.lastOrderDate).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3">
+                        <button className="text-blue-600 hover:text-blue-900 mr-3">
                           View
                         </button>
-                        <button className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300">
+                        <button className="text-gray-600 hover:text-gray-900">
                           Message
                         </button>
                       </td>
@@ -199,18 +207,18 @@ const CustomersPage = () => {
             </div>
             
             {/* Pagination */}
-            <div className="bg-white dark:bg-gray-900 px-6 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-800">
+            <div className="bg-white px-6 py-3 flex items-center justify-between border-t border-blue-100">
               <div className="flex-1 flex justify-between sm:hidden">
-                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <button className="relative inline-flex items-center px-4 py-2 border border-blue-100 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-blue-50">
                   Previous
                 </button>
-                <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-blue-100 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-blue-50">
                   Next
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-gray-700">
                     Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
                     <span className="font-medium">{customers.length}</span> customers
                   </p>
@@ -218,29 +226,29 @@ const CustomersPage = () => {
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                     <button
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-blue-100 bg-white text-sm font-medium text-gray-500 hover:bg-blue-50"
                     >
                       <span className="sr-only">Previous</span>
                       &larr;
                     </button>
                     <button
                       aria-current="page"
-                      className="z-10 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                      className="z-10 bg-blue-50 border-blue-500 text-blue-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
                     >
                       1
                     </button>
                     <button
-                      className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                      className="bg-white border-blue-100 text-gray-500 hover:bg-blue-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
                     >
                       2
                     </button>
                     <button
-                      className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                      className="bg-white border-blue-100 text-gray-500 hover:bg-blue-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
                     >
                       3
                     </button>
                     <button
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blue-100 bg-white text-sm font-medium text-gray-500 hover:bg-blue-50"
                     >
                       <span className="sr-only">Next</span>
                       &rarr;
