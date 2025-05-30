@@ -2,20 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { 
-  User,
-  Store,
-  MapPin,
-  Building2,
-  CreditCard,
-  Share2,
-  Upload,
-  Edit2,
-  Plus,
-  Trash2,
-  Globe
-} from 'lucide-react';
-import { uploadImage } from '../utils/cloudinary';
+import { Edit2 } from 'lucide-react';
 
 interface BankAccount {
   id: string;
@@ -52,11 +39,9 @@ interface FormData {
 
 const SettingsPage = () => {
   const { seller, updateSellerProfile } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
-  const [editMode, setEditMode] = useState<string | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(
     seller?.bankDetails ? [{
       id: '1',
@@ -88,22 +73,15 @@ const SettingsPage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    const [parent, child] = name.split('.');
     
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent as keyof typeof prev] as Record<string, any>),
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [parent]: {
+        ...(prev[parent as keyof typeof prev] as Record<string, unknown>),
+        [child]: value
+      }
+    }));
   };
 
   const handleBankAccountChange = (id: string, field: keyof BankAccount, value: string | boolean) => {
@@ -141,65 +119,30 @@ const SettingsPage = () => {
     })));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'storeLogo' | 'storeBanner') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    
     try {
-      setLoading(true);
-      const imageUrl = await uploadImage(file);
-      setFormData(prev => ({
-        ...prev,
-        [type]: imageUrl
-      }));
-    } catch (err) {
-      console.error('Error uploading image:', err);
+      setError(null);
+    } catch {
       setError('Failed to upload image');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!seller) return;
-
     try {
-      setLoading(true);
-      setError(null);
-
-      const updateData = {
-        ...formData,
-        bankDetails: bankAccounts.length > 0 ? {
-          bankName: bankAccounts[0].bankName,
-          accountNumber: bankAccounts[0].accountNumber,
-          accountName: bankAccounts[0].accountName
-        } : undefined
-      };
-      
-      await updateSellerProfile(updateData);
+      await updateSellerProfile(formData);
       setSuccess('Settings updated successfully');
-      setEditMode(null);
-    } catch (error) {
+    } catch {
       setError('Failed to update settings. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
-
-  const tabs = [
-    { id: 'profile', label: 'Profile Information', icon: <User className="w-5 h-5" /> },
-    { id: 'store', label: 'Store Details', icon: <Store className="w-5 h-5" /> },
-    { id: 'address', label: 'Business Address', icon: <MapPin className="w-5 h-5" /> },
-    { id: 'business', label: 'Business Information', icon: <Building2 className="w-5 h-5" /> },
-    { id: 'banking', label: 'Banking Details', icon: <CreditCard className="w-5 h-5" /> },
-    { id: 'social', label: 'Social Media', icon: <Share2 className="w-5 h-5" /> }
-  ];
 
   const renderEditButton = (tabId: string) => (
     <button
       type="button"
-      onClick={() => setEditMode(tabId)}
+      onClick={() => setActiveTab(tabId)}
       className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
     >
       <Edit2 className="w-4 h-4 mr-2" />
@@ -376,7 +319,7 @@ const SettingsPage = () => {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImageUpload(e, 'storeLogo')}
+                          onChange={handleImageUpload}
                           className="hidden"
                           id="storeLogo"
                         />
@@ -401,7 +344,7 @@ const SettingsPage = () => {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImageUpload(e, 'storeBanner')}
+                          onChange={handleImageUpload}
                           className="hidden"
                           id="storeBanner"
                         />

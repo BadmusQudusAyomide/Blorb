@@ -1,14 +1,10 @@
-import { useState } from 'react';
 import { 
-  BarChart3, 
   Mail, 
-  Share2, 
   Tag, 
   TrendingUp 
 } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { formatCurrency } from '../utils/formatters';
 
 interface Campaign {
   id: string;
@@ -35,16 +31,6 @@ interface Discount {
 }
 
 const MarketingPage = () => {
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discounts' | 'coupons' | 'emails'>('campaigns');
-  const [timeRange, setTimeRange] = useState('30d');
-  
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [discounts, setDiscounts] = useState<Discount[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
   // Mock data - in a real app, this would come from an API
   const mockCampaigns: Campaign[] = [
     {
@@ -52,44 +38,22 @@ const MarketingPage = () => {
       name: 'Summer Sale',
       status: 'active',
       type: 'discount',
-      startDate: '2023-05-01',
-      endDate: '2023-05-31',
+      startDate: '2024-06-01',
+      endDate: '2024-08-31',
       budget: 5000,
-      revenue: 24500,
-      roi: 390
+      revenue: 25000,
+      roi: 5
     },
     {
       id: '2',
-      name: 'New Product Launch',
+      name: 'Email Newsletter',
       status: 'active',
       type: 'email',
-      startDate: '2023-05-15',
-      endDate: '2023-06-15',
-      budget: 3000,
-      revenue: 18000,
-      roi: 500
-    },
-    {
-      id: '3',
-      name: 'Spring Clearance',
-      status: 'completed',
-      type: 'social',
-      startDate: '2023-04-01',
-      endDate: '2023-04-30',
-      budget: 2000,
-      revenue: 12500,
-      roi: 525
-    },
-    {
-      id: '4',
-      name: 'Loyalty Rewards',
-      status: 'paused',
-      type: 'email',
-      startDate: '2023-05-10',
-      endDate: '2023-06-10',
-      budget: 1500,
-      revenue: 4500,
-      roi: 200
+      startDate: '2024-01-01',
+      endDate: '2024-12-31',
+      budget: 1000,
+      revenue: 15000,
+      roi: 15
     }
   ];
 
@@ -99,82 +63,45 @@ const MarketingPage = () => {
       code: 'SUMMER20',
       type: 'percentage',
       value: 20,
-      uses: 124,
-      maxUses: 200,
-      startDate: '2023-05-01',
-      endDate: '2023-05-31',
+      uses: 150,
+      maxUses: 1000,
+      startDate: '2024-06-01',
+      endDate: '2024-08-31',
       status: 'active'
     },
     {
       id: '2',
-      code: 'FREESHIP',
-      type: 'fixed',
-      value: 500,
-      uses: 89,
-      maxUses: null,
-      startDate: '2023-05-15',
-      endDate: '2023-06-15',
-      status: 'active'
-    },
-    {
-      id: '3',
-      code: 'SPRING15',
-      type: 'percentage',
-      value: 15,
-      uses: 200,
-      maxUses: 200,
-      startDate: '2023-04-01',
-      endDate: '2023-04-30',
-      status: 'expired'
-    },
-    {
-      id: '4',
       code: 'WELCOME10',
-      type: 'percentage',
+      type: 'fixed',
       value: 10,
-      uses: 56,
-      maxUses: 100,
-      startDate: '2023-06-01',
-      endDate: '2023-06-30',
-      status: 'scheduled'
+      uses: 75,
+      maxUses: 500,
+      startDate: '2024-01-01',
+      endDate: '2024-12-31',
+      status: 'active'
     }
-  ];
-
-  const stats = [
-    { title: "Active Campaigns", value: "2", change: "+1", icon: <TrendingUp className="w-5 h-5 text-green-600" /> },
-    { title: "Total Revenue", value: "₦42,500", change: "+18%", icon: <Tag className="w-5 h-5 text-indigo-600" /> },
-    { title: "Email Open Rate", value: "42%", change: "+5%", icon: <Mail className="w-5 h-5 text-blue-600" /> },
-    { title: "Discount Usage", value: "213", change: "+32%", icon: <Mail className="w-5 h-5 text-purple-600" /> }
   ];
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'paused':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'expired':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      case 'scheduled':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
+    const statusClasses = {
+      active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      paused: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      expired: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      scheduled: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    };
+
+    return statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
 
   const getTypeBadge = (type: string) => {
-    switch (type) {
-      case 'discount':
-        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
-      case 'email':
-        return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200';
-      case 'social':
-        return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
+    const typeClasses = {
+      discount: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      email: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      social: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+    };
+
+    return typeClasses[type as keyof typeof typeClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
 
   return (
@@ -188,57 +115,52 @@ const MarketingPage = () => {
             <h2 className="text-2xl font-bold text-blue-900">Marketing</h2>
             <p className="text-gray-600">Manage your marketing campaigns and promotions</p>
           </div>
-
+          
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Active Campaigns</p>
-                  <p className="text-2xl font-bold text-blue-900">3</p>
-                </div>
+                  <p className="text-2xl font-bold text-blue-900">2</p>
+            </div>
                 <div className="p-3 bg-blue-50 rounded-full">
                   <TrendingUp className="w-6 h-6 text-blue-600" />
                 </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-blue-900">₦24,500</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-full">
-                  <BarChart3 className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Average ROI</p>
-                  <p className="text-2xl font-bold text-blue-900">245%</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-full">
-                  <BarChart3 className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
             </div>
           </div>
-
-          {/* Campaigns Section */}
-          <div className="bg-white rounded-lg shadow border border-blue-100 mb-8">
-            <div className="p-6 border-b border-blue-100">
+          
+            <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-blue-900">Active Campaigns</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  Create Campaign
-                </button>
+                  <div>
+                  <p className="text-sm text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-blue-900">₦42,500</p>
+                  </div>
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <Tag className="w-6 h-6 text-blue-600" />
+                </div>
               </div>
+          </div>
+          
+            <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Email Open Rate</p>
+                  <p className="text-2xl font-bold text-blue-900">42%</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <Mail className="w-6 h-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Campaigns Table */}
+          <div className="bg-white rounded-lg shadow border border-blue-100 overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-blue-100">
+              <h3 className="text-lg font-semibold text-blue-900">Active Campaigns</h3>
             </div>
-            <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-blue-100">
                 <thead className="bg-blue-50">
                   <tr>
@@ -260,65 +182,49 @@ const MarketingPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       ROI
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-900 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+                      </tr>
+                    </thead>
                 <tbody className="bg-white divide-y divide-blue-100">
-                  {campaigns.map((campaign) => (
+                  {mockCampaigns.map((campaign) => (
                     <tr key={campaign.id} className="hover:bg-blue-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-blue-900">{campaign.name}</div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-500">
                           {campaign.startDate} - {campaign.endDate}
                         </div>
-                      </td>
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(campaign.type)}`}>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(campaign.type)}`}>
                           {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}
-                        </span>
-                      </td>
+                            </span>
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(campaign.status)}`}>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(campaign.status)}`}>
                           {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        ₦{campaign.budget.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        ₦{campaign.revenue.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {campaign.roi}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-700 mr-3">
-                          Edit
-                        </button>
-                        <button className="text-red-600 hover:text-red-700">
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            </span>
+                          </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ₦{campaign.budget.toLocaleString()}
+                          </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ₦{campaign.revenue.toLocaleString()}
+                          </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {campaign.roi}x
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  </div>
+                </div>
+                
+                {/* Discounts Table */}
+          <div className="bg-white rounded-lg shadow border border-blue-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-blue-100">
+              <h3 className="text-lg font-semibold text-blue-900">Active Discounts</h3>
             </div>
-          </div>
-
-          {/* Discount Codes Section */}
-          <div className="bg-white rounded-lg shadow border border-blue-100">
-            <div className="p-6 border-b border-blue-100">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-blue-900">Discount Codes</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  Create Code
-                </button>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-blue-100">
                 <thead className="bg-blue-50">
                   <tr>
@@ -337,49 +243,41 @@ const MarketingPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-900 uppercase tracking-wider">
-                      Actions
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
+                      Valid Until
                     </th>
-                  </tr>
-                </thead>
+                      </tr>
+                    </thead>
                 <tbody className="bg-white divide-y divide-blue-100">
-                  {discounts.map((discount) => (
+                  {mockDiscounts.map((discount) => (
                     <tr key={discount.id} className="hover:bg-blue-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-blue-900">{discount.code}</div>
-                        <div className="text-sm text-gray-600">
-                          {discount.startDate} - {discount.endDate}
-                        </div>
-                      </td>
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeBadge(discount.type)}`}>
                           {discount.type.charAt(0).toUpperCase() + discount.type.slice(1)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {discount.type === 'percentage' ? `${discount.value}%` : `₦${discount.value}`}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {discount.type === 'percentage' ? `${discount.value}%` : `₦${discount.value}`}
+                          </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {discount.uses} / {discount.maxUses || '∞'}
-                      </td>
+                          </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(discount.status)}`}>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(discount.status)}`}>
                           {discount.status.charAt(0).toUpperCase() + discount.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-700 mr-3">
-                          Edit
-                        </button>
-                        <button className="text-red-600 hover:text-red-700">
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            </span>
+                          </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {discount.endDate}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
           </div>
         </div>
       </main>
