@@ -1,5 +1,4 @@
-import React from 'react';
-import { Truck, Package, MapPin, Clock } from 'lucide-react';
+import { Truck } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 
@@ -16,13 +15,13 @@ const ShippingPage = () => {
             <h2 className="text-2xl font-bold text-blue-900">Shipping</h2>
             <p className="text-sm text-gray-600">Manage your shipping methods and carriers</p>
           </div>
-
+          
           {/* Coming Soon Message */}
           <div className="bg-white rounded-lg shadow border border-blue-100 p-8 text-center">
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="p-4 bg-blue-50 rounded-full">
                 <Truck className="w-12 h-12 text-blue-600" />
-              </div>
+            </div>
               <h3 className="text-xl font-semibold text-blue-900">Coming Soon</h3>
               <p className="text-gray-600 max-w-md">
                 We're developing a comprehensive shipping management system to help you streamline your delivery operations.
@@ -41,39 +40,39 @@ const ShippingPage = () => {
               </div>
             </div>
           </div>
-
+          
           {/* Feature Preview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
             <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
               <div className="flex items-center space-x-4">
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <Package className="w-6 h-6 text-blue-600" />
+                  <Truck className="w-6 h-6 text-blue-600" />
                 </div>
-                <div>
+              <div>
                   <h4 className="text-lg font-medium text-blue-900">Carrier Integration</h4>
                   <p className="text-sm text-gray-600">Connect with multiple shipping carriers</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
+                
             <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
               <div className="flex items-center space-x-4">
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <MapPin className="w-6 h-6 text-blue-600" />
+                  <Truck className="w-6 h-6 text-blue-600" />
                 </div>
-                <div>
+                    <div>
                   <h4 className="text-lg font-medium text-blue-900">Rate Calculator</h4>
                   <p className="text-sm text-gray-600">Calculate shipping costs instantly</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
+                
             <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
               <div className="flex items-center space-x-4">
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <Clock className="w-6 h-6 text-blue-600" />
+                  <Truck className="w-6 h-6 text-blue-600" />
                 </div>
-                <div>
+                      <div>
                   <h4 className="text-lg font-medium text-blue-900">Tracking System</h4>
                   <p className="text-sm text-gray-600">Real-time order tracking</p>
                 </div>

@@ -1,5 +1,4 @@
-import React from 'react';
-import { HelpCircle, BookOpen, MessageSquare, Phone, Mail, Zap } from 'lucide-react';
+import { HelpCircle, BookOpen, Phone, Mail, Zap } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 import { MessageCircle } from 'lucide-react';

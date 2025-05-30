@@ -12,7 +12,8 @@ import {
   Upload,
   Edit2,
   Plus,
-  Trash2
+  Trash2,
+  Globe
 } from 'lucide-react';
 import { uploadImage } from '../utils/cloudinary';
 
@@ -161,22 +162,19 @@ const SettingsPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    if (!seller) return;
 
     try {
-      // Get the default bank account
-      const defaultBankAccount = bankAccounts.find(account => account.isDefault);
-      
-      // Prepare the data to update
+      setLoading(true);
+      setError(null);
+
       const updateData = {
         ...formData,
-        bankDetails: defaultBankAccount ? {
-          bankName: defaultBankAccount.bankName,
-          accountNumber: defaultBankAccount.accountNumber,
-          accountName: defaultBankAccount.accountName
-        } : null
+        bankDetails: bankAccounts.length > 0 ? {
+          bankName: bankAccounts[0].bankName,
+          accountNumber: bankAccounts[0].accountNumber,
+          accountName: bankAccounts[0].accountName
+        } : undefined
       };
       
       await updateSellerProfile(updateData);
@@ -224,13 +222,13 @@ const SettingsPage = () => {
           {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
               {error}
-                  </div>
+            </div>
           )}
 
           {success && (
             <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-md">
               {success}
-                </div>
+            </div>
           )}
 
           <div className="bg-white rounded-lg shadow border border-blue-100">
@@ -266,7 +264,7 @@ const SettingsPage = () => {
                 >
                   Banking
                 </button>
-                    <button
+                <button
                   onClick={() => setActiveTab('notifications')}
                   className={`${
                     activeTab === 'notifications'
@@ -275,70 +273,70 @@ const SettingsPage = () => {
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Notifications
-                    </button>
-                </nav>
-              </div>
+                </button>
+              </nav>
+            </div>
 
             <div className="p-6">
-                  {activeTab === 'profile' && (
+              {activeTab === 'profile' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-blue-900">Profile Information</h3>
                     {renderEditButton('profile')}
-                      </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input
-                          type="text"
-                          name="name"
+                      <input
+                        type="text"
+                        name="name"
                         value={formData.name || ''}
-                          onChange={handleInputChange}
+                        onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input
-                          type="email"
-                          name="email"
+                      <input
+                        type="email"
+                        name="email"
                         value={formData.email || ''}
-                          onChange={handleInputChange}
+                        onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <input
-                          type="tel"
-                          name="phone"
+                      <input
+                        type="tel"
+                        name="phone"
                         value={formData.phone || ''}
-                          onChange={handleInputChange}
+                        onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
-                    </div>
-                  )}
+                </div>
+              )}
 
-                  {activeTab === 'store' && (
+              {activeTab === 'store' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-blue-900">Store Information</h3>
                     {renderEditButton('store')}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
-                        <input
-                          type="text"
-                          name="storeName"
+                      <input
+                        type="text"
+                        name="storeName"
                         value={formData.storeName || ''}
-                          onChange={handleInputChange}
+                        onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
                       <select
                         name="businessType"
@@ -367,43 +365,43 @@ const SettingsPage = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Store Logo</label>
-                        <div className="mt-1 flex items-center space-x-4">
-                          {formData.storeLogo && (
-                            <img
-                              src={formData.storeLogo}
-                              alt="Store Logo"
+                      <div className="mt-1 flex items-center space-x-4">
+                        {formData.storeLogo && (
+                          <img
+                            src={formData.storeLogo}
+                            alt="Store Logo"
                             className="h-20 w-20 object-cover rounded-lg"
-                            />
-                          )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageUpload(e, 'storeLogo')}
+                          />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, 'storeLogo')}
                           className="hidden"
                           id="storeLogo"
-                            />
+                        />
                         <label
                           htmlFor="storeLogo"
                           className="px-4 py-2 border border-blue-100 rounded-md text-sm font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                         >
                           Upload Logo
-                          </label>
-                        </div>
+                        </label>
                       </div>
-                      <div>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Store Banner</label>
-                        <div className="mt-1 flex items-center space-x-4">
-                          {formData.storeBanner && (
-                            <img
-                              src={formData.storeBanner}
-                              alt="Store Banner"
+                      <div className="mt-1 flex items-center space-x-4">
+                        {formData.storeBanner && (
+                          <img
+                            src={formData.storeBanner}
+                            alt="Store Banner"
                             className="h-32 w-full object-cover rounded-lg"
-                            />
-                          )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageUpload(e, 'storeBanner')}
+                          />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, 'storeBanner')}
                           className="hidden"
                           id="storeBanner"
                         />
@@ -415,55 +413,55 @@ const SettingsPage = () => {
                         </label>
                       </div>
                     </div>
-                      </div>
-                    </div>
-                  )}
+                  </div>
+                </div>
+              )}
 
-                  {activeTab === 'banking' && (
+              {activeTab === 'banking' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-blue-900">Bank Accounts</h3>
-                              <button
+                    <button
                       onClick={addBankAccount}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              >
+                    >
                       Add Bank Account
-                              </button>
-                          </div>
+                    </button>
+                  </div>
                   <div className="space-y-4">
                     {bankAccounts.map((account) => (
                       <div key={account.id} className="bg-blue-50 p-4 rounded-lg">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-                              <input
-                                type="text"
-                                value={account.bankName}
-                                onChange={(e) => handleBankAccountChange(account.id, 'bankName', e.target.value)}
+                            <input
+                              type="text"
+                              value={account.bankName}
+                              onChange={(e) => handleBankAccountChange(account.id, 'bankName', e.target.value)}
                               className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
+                            />
+                          </div>
+                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                              <input
-                                type="text"
-                                value={account.accountNumber}
-                                onChange={(e) => handleBankAccountChange(account.id, 'accountNumber', e.target.value)}
+                            <input
+                              type="text"
+                              value={account.accountNumber}
+                              onChange={(e) => handleBankAccountChange(account.id, 'accountNumber', e.target.value)}
                               className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
+                            />
+                          </div>
+                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
-                              <input
-                                type="text"
-                                value={account.accountName}
-                                onChange={(e) => handleBankAccountChange(account.id, 'accountName', e.target.value)}
+                            <input
+                              type="text"
+                              value={account.accountName}
+                              onChange={(e) => handleBankAccountChange(account.id, 'accountName', e.target.value)}
                               className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
+                            />
+                          </div>
                           <div className="flex items-end space-x-4">
-                                <button
-                                  onClick={() => setDefaultBankAccount(account.id)}
+                            <button
+                              onClick={() => setDefaultBankAccount(account.id)}
                               className={`px-4 py-2 border rounded-md text-sm font-medium ${
                                 account.isDefault
                                   ? 'border-blue-600 text-blue-600 bg-blue-50'
@@ -478,23 +476,23 @@ const SettingsPage = () => {
                                 className="px-4 py-2 text-red-600 hover:text-red-700"
                               >
                                 Remove
-                                </button>
+                              </button>
                             )}
                           </div>
-                          </div>
-              </div>
-            ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                      )}
+              )}
 
               {activeTab === 'notifications' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-blue-900">Notification Preferences</h3>
                     {renderEditButton('notifications')}
-              </div>
-              <div className="space-y-4">
+                  </div>
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                       <div>
                         <h4 className="text-sm font-medium text-blue-900">Order Notifications</h4>
@@ -503,8 +501,8 @@ const SettingsPage = () => {
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                  </div>
+                      </label>
+                    </div>
                     <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                       <div>
                         <h4 className="text-sm font-medium text-blue-900">Marketing Updates</h4>
@@ -516,7 +514,7 @@ const SettingsPage = () => {
                       </label>
                     </div>
                   </div>
-              </div>
+                </div>
               )}
             </div>
           </div>

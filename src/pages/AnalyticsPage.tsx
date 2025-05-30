@@ -14,13 +14,9 @@ import {
 import type { DocumentData } from 'firebase/firestore';
 import { 
   TrendingUp, 
-  ShoppingBag, 
-  Users, 
-  DollarSign,
-  ArrowUp,
-  ArrowDown,
-  Calendar,
-  Filter
+  ShoppingCart, 
+  DollarSign, 
+  Package 
 } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
@@ -178,7 +174,7 @@ const AnalyticsPage = () => {
         value: totalOrders.toString(),
         change: `${Math.abs(ordersChange).toFixed(1)}%`,
         trend: ordersChange >= 0 ? 'up' : 'down',
-        icon: <ShoppingBag className="w-6 h-6 text-blue-600" />
+        icon: <ShoppingCart className="w-6 h-6 text-blue-600" />
       },
       {
         title: 'Average Order Value',
@@ -192,7 +188,7 @@ const AnalyticsPage = () => {
         value: totalProducts.toString(),
         change: '0%',
         trend: 'up',
-        icon: <Users className="w-6 h-6 text-blue-600" />
+        icon: <Package className="w-6 h-6 text-blue-600" />
       }
     ]);
 
@@ -210,7 +206,7 @@ const AnalyticsPage = () => {
             <h2 className="text-2xl font-bold text-blue-900">Analytics</h2>
             <p className="text-sm text-gray-600">Track your store's performance and growth</p>
           </div>
-
+          
           {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
               {error}
@@ -235,11 +231,11 @@ const AnalyticsPage = () => {
                   }`}
                 >
                   {range}
-                </button>
+              </button>
               ))}
             </div>
           </div>
-
+          
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {stats.map((stat, index) => (
@@ -264,7 +260,7 @@ const AnalyticsPage = () => {
               </div>
             ))}
           </div>
-
+          
           {/* Coming Soon Message */}
           <div className="bg-white rounded-lg shadow border border-blue-100 p-6 text-center">
             <h3 className="text-lg font-medium text-blue-900 mb-2">More Analytics Coming Soon</h3>

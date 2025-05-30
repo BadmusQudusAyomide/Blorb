@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, ShoppingBag, Search, Mail, Phone, MapPin } from 'lucide-react';
+import { Users, ShoppingBag, Search, Mail, Phone } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 

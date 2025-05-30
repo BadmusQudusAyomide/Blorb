@@ -39,7 +39,7 @@ interface Product {
   discountPrice?: number;
   stock: number;
   category: string;
-  images: (string | File)[];
+  images: string[];
   sku: string;
   brandName: string;
   tags?: string[];

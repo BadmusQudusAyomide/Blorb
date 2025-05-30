@@ -1,5 +1,4 @@
-import React from 'react';
-import { MessageSquare } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 
@@ -21,7 +20,7 @@ const MessagesPage = () => {
           <div className="bg-white rounded-lg shadow border border-blue-100 p-8 text-center">
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="p-4 bg-blue-50 rounded-full">
-                <MessageSquare className="w-12 h-12 text-blue-600" />
+                <MessageCircle className="w-12 h-12 text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-blue-900">Coming Soon</h3>
               <p className="text-gray-600 max-w-md">

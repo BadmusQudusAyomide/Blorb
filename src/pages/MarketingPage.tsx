@@ -1,21 +1,14 @@
+import { useState } from 'react';
+import { 
+  BarChart3, 
+  Mail, 
+  Share2, 
+  Tag, 
+  TrendingUp 
+} from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
-import { 
-  TrendingUp,
-  Tag,
-  Mail,
-  Bell,
-  Plus,
-  Filter,
-  Download,
-  Calendar,
-  Search,
-  ArrowRight,
-  ChevronDown,
-  DollarSign,
-  BarChart,
-} from 'lucide-react';
-import { useState } from 'react';
+import { formatCurrency } from '../utils/formatters';
 
 interface Campaign {
   id: string;
@@ -47,8 +40,13 @@ const MarketingPage = () => {
   
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
   // Mock data - in a real app, this would come from an API
-  const campaigns: Campaign[] = [
+  const mockCampaigns: Campaign[] = [
     {
       id: '1',
       name: 'Summer Sale',
@@ -95,7 +93,7 @@ const MarketingPage = () => {
     }
   ];
 
-  const discounts: Discount[] = [
+  const mockDiscounts: Discount[] = [
     {
       id: '1',
       code: 'SUMMER20',
@@ -146,7 +144,7 @@ const MarketingPage = () => {
     { title: "Active Campaigns", value: "2", change: "+1", icon: <TrendingUp className="w-5 h-5 text-green-600" /> },
     { title: "Total Revenue", value: "₦42,500", change: "+18%", icon: <Tag className="w-5 h-5 text-indigo-600" /> },
     { title: "Email Open Rate", value: "42%", change: "+5%", icon: <Mail className="w-5 h-5 text-blue-600" /> },
-    { title: "Discount Usage", value: "213", change: "+32%", icon: <Bell className="w-5 h-5 text-purple-600" /> }
+    { title: "Discount Usage", value: "213", change: "+32%", icon: <Mail className="w-5 h-5 text-purple-600" /> }
   ];
 
   const getStatusBadge = (status: string) => {
@@ -212,7 +210,7 @@ const MarketingPage = () => {
                   <p className="text-2xl font-bold text-blue-900">₦24,500</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-full">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
             </div>
@@ -224,7 +222,7 @@ const MarketingPage = () => {
                   <p className="text-2xl font-bold text-blue-900">245%</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-full">
-                  <BarChart className="w-6 h-6 text-blue-600" />
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
             </div>
