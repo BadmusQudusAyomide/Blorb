@@ -31,6 +31,16 @@ interface Order {
   status: string;
   createdAt: Timestamp;
   sellerIds: string[];
+  sellerStatuses: {
+    [sellerId: string]: {
+      status: 'pending' | 'approved' | 'rejected' | 'shipped' | 'delivered';
+      approvedAt: Date | null;
+      shippedAt: Date | null;
+      deliveredAt: Date | null;
+      notes: string;
+      trackingNumber: string;
+    };
+  };
 }
 
 interface StatCard {
@@ -39,6 +49,27 @@ interface StatCard {
   change: string;
   icon: ReactElement;
 }
+
+const getStatusClass = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+    case 'approved':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+    case 'rejected':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    case 'processing':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+    case 'shipped':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+    case 'delivered':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  }
+};
 
 const SellerDashboard = () => {
   const { user, seller } = useAuth();
@@ -223,12 +254,8 @@ const SellerDashboard = () => {
                     <tr key={order.id} className="hover:bg-blue-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-800">#{order.orderNumber}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                          order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(order.sellerStatuses[user?.uid || '']?.status || 'pending')}`}>
+                          {order.sellerStatuses[user?.uid || '']?.status?.charAt(0).toUpperCase() + order.sellerStatuses[user?.uid || '']?.status?.slice(1) || 'Pending'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">₦{order.total.toFixed(2)}</td>

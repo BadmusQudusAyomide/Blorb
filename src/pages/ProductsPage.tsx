@@ -71,29 +71,29 @@ interface Category {
 }
 
 interface NewProductForm {
-  name: string;
-  description: string;
-  price: string;
-  discountPrice: string;
-  stock: string;
-  category: string;
-  images: (string | File)[];
-  sku: string;
-  brandName: string;
-  tags: string;
-  colors: string[];
-  sizes: string[];
-  weight: {
-    value: string;
-    unit: string;
-  };
-  dimensions: {
-    length: string;
-    width: string;
-    height: string;
-    unit: string;
-  };
-  returnPolicy: string;
+    name: string;
+    description: string;
+    price: string;
+    discountPrice: string;
+    stock: string;
+    category: string;
+    images: (string | File)[];
+    sku: string;
+    brandName: string;
+    tags: string;
+    colors: string[];
+    sizes: string[];
+    weight: {
+      value: string;
+      unit: string;
+    };
+    dimensions: {
+      length: string;
+      width: string;
+      height: string;
+      unit: string;
+    };
+    returnPolicy: string;
 }
 
 const ProductsPage = () => {
@@ -172,9 +172,9 @@ const ProductsPage = () => {
 
     // Set active tab based on URL
     const pathParts = location.pathname.split('/');
-    if (pathParts.length > 2 && pathParts[2]) {
-      setActiveTab(pathParts[2]);
-    } else {
+  if (pathParts.length > 2 && pathParts[2]) {
+    setActiveTab(pathParts[2]);
+  } else {
       setActiveTab('all');
     }
 
@@ -238,11 +238,11 @@ const ProductsPage = () => {
       
       // Add to Firestore
       const productData: Omit<Product, 'id'> = {
-        name: newProduct.name,
+      name: newProduct.name,
         description: newProduct.description,
-        price: parseFloat(newProduct.price),
+      price: parseFloat(newProduct.price),
         discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : undefined,
-        stock: parseInt(newProduct.stock),
+      stock: parseInt(newProduct.stock),
         category: newProduct.category,
         images: imageUrls,
         sku: newProduct.sku || generateSKU(newProduct.category),
@@ -267,16 +267,16 @@ const ProductsPage = () => {
       };
 
       await addDoc(collection(db, 'products'), productData);
-      setShowAddProductModal(false);
-      setNewProduct({
-        name: '',
+    setShowAddProductModal(false);
+    setNewProduct({
+      name: '',
         description: '',
-        price: '',
+      price: '',
         discountPrice: '',
-        stock: '',
+      stock: '',
         category: '',
         images: [],
-        sku: '',
+      sku: '',
         brandName: '',
         tags: '',
         colors: [],
@@ -537,11 +537,11 @@ const ProductsPage = () => {
           {/* Tabs */}
           <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 mb-6">
             <Link
-              to="/products"
+  to="/products"
               className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              All Products
-            </Link>
+>
+  All Products
+</Link>
             <Link
               to="/products/inventory"
               className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}

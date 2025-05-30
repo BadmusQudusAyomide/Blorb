@@ -9,7 +9,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  type AuthError
+  type AuthError,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
@@ -51,6 +53,7 @@ interface AuthContextType {
   seller: Seller | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   updateSellerProfile: (sellerData: Partial<Seller>) => Promise<void>;
   error: string | null;
@@ -221,6 +224,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Add Google login function
+  const loginWithGoogle = async () => {
+    try {
+      setError(null);
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      
+      // Check if seller profile exists
+      const sellerDoc = await getDoc(doc(db, 'sellers', result.user.uid));
+      
+      if (!sellerDoc.exists()) {
+        // Create new seller profile
+        const newSeller: Seller = {
+          id: result.user.uid,
+          name: result.user.displayName || '',
+          email: result.user.email || '',
+          isProfileComplete: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await setDoc(doc(db, 'sellers', result.user.uid), newSeller);
+        setSeller(newSeller);
+      } else {
+        const sellerData = sellerDoc.data() as Seller;
+        setSeller(sellerData);
+      }
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      setError(getFirebaseErrorMessage(error as AuthError));
+    }
+  };
+
   // Helper function to get user-friendly error messages
   const getFirebaseErrorMessage = (error: AuthError): string => {
     switch (error.code) {
@@ -246,6 +282,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     seller,
     login,
     signup,
+    loginWithGoogle,
     logout,
     updateSellerProfile,
     error,

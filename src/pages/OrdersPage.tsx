@@ -102,6 +102,13 @@ const OrdersPage = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const ordersPerPage = 10;
 
+  // Add new state for confirmation modal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    orderId: string;
+    action: 'approved' | 'rejected';
+  } | null>(null);
+
   // Fetch orders
   useEffect(() => {
     if (!user) {
@@ -182,30 +189,41 @@ const OrdersPage = () => {
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
-  // Add new function to handle order status updates
+  // Update the handleOrderStatusUpdate function
   const handleOrderStatusUpdate = async (orderId: string, newStatus: 'approved' | 'rejected') => {
     if (!user) return;
     
-    setProcessingOrder(orderId);
+    setPendingAction({
+      orderId,
+      action: newStatus
+    });
+    setShowConfirmModal(true);
+  };
+
+  // Add new function to handle the confirmed action
+  const handleConfirmedAction = async () => {
+    if (!user || !pendingAction) return;
+    
+    setProcessingOrder(pendingAction.orderId);
     try {
-      const orderRef = doc(db, 'orders', orderId);
-      const order = orders.find(o => o.id === orderId);
+      const orderRef = doc(db, 'orders', pendingAction.orderId);
+      const order = orders.find(o => o.id === pendingAction.orderId);
       
       if (!order) return;
 
-      const status = newStatus === 'approved' ? 'approved' : 'rejected';
+      const status = pendingAction.action;
       const timestamp = new Date().toISOString();
       
       await updateDoc(orderRef, {
         [`sellerStatuses.${user.uid}.status`]: status,
-        [`sellerStatuses.${user.uid}.approvedAt`]: newStatus === 'approved' ? Timestamp.now() : null,
-        [`sellerStatuses.${user.uid}.notes`]: newStatus === 'approved' ? 'Order approved by seller' : 'Order rejected by seller',
+        [`sellerStatuses.${user.uid}.approvedAt`]: status === 'approved' ? Timestamp.now() : null,
+        [`sellerStatuses.${user.uid}.notes`]: status === 'approved' ? 'Order approved by seller' : 'Order rejected by seller',
         updatedAt: Timestamp.now(),
         statusHistory: arrayUnion({
           status: status,
           timestamp: timestamp,
           updatedBy: user.uid,
-          notes: newStatus === 'approved' ? 'Order approved by seller' : 'Order rejected by seller'
+          notes: status === 'approved' ? 'Order approved by seller' : 'Order rejected by seller'
         })
       });
 
@@ -218,9 +236,13 @@ const OrdersPage = () => {
       }
 
       setProcessingOrder(null);
+      setShowConfirmModal(false);
+      setPendingAction(null);
     } catch (error) {
       console.error('Error updating order status:', error);
       setProcessingOrder(null);
+      setShowConfirmModal(false);
+      setPendingAction(null);
     }
   };
 
@@ -550,10 +572,13 @@ const OrdersPage = () => {
                       <button
                             onClick={() => handleOrderStatusUpdate(selectedOrder.id, 'approved')}
                             disabled={processingOrder === selectedOrder.id}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {processingOrder === selectedOrder.id ? (
-                              'Processing...'
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Processing...
+                              </div>
                             ) : (
                               <>
                                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -564,10 +589,13 @@ const OrdersPage = () => {
                           <button
                             onClick={() => handleOrderStatusUpdate(selectedOrder.id, 'rejected')}
                             disabled={processingOrder === selectedOrder.id}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {processingOrder === selectedOrder.id ? (
-                              'Processing...'
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Processing...
+                              </div>
                             ) : (
                               <>
                                 <XCircle className="h-4 w-4 mr-2" />
@@ -691,6 +719,53 @@ const OrdersPage = () => {
                 </div>
               </div>
             )}
+
+          {/* Confirmation Modal */}
+          {showConfirmModal && pendingAction && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    {pendingAction.action === 'approved' ? 'Accept Order' : 'Reject Order'}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    {pendingAction.action === 'approved' 
+                      ? 'Are you sure you want to accept this order? This action cannot be undone.'
+                      : 'Are you sure you want to reject this order? This action cannot be undone.'}
+                  </p>
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={() => {
+                        setShowConfirmModal(false);
+                        setPendingAction(null);
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleConfirmedAction}
+                      disabled={processingOrder === pendingAction.orderId}
+                      className={`px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                        pendingAction.action === 'approved'
+                          ? 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-red-600 hover:bg-red-700'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {processingOrder === pendingAction.orderId ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </div>
+                      ) : (
+                        pendingAction.action === 'approved' ? 'Accept Order' : 'Reject Order'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
