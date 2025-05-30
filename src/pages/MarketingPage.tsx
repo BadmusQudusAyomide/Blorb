@@ -163,7 +163,7 @@ const MarketingPage = () => {
                 <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-blue-100">
                 <thead className="bg-blue-50">
-                  <tr>
+                      <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Campaign
                     </th>
@@ -227,7 +227,7 @@ const MarketingPage = () => {
                 <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-blue-100">
                 <thead className="bg-blue-50">
-                  <tr>
+                      <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">
                       Code
                     </th>

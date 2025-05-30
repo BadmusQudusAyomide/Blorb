@@ -70,6 +70,32 @@ interface Category {
   createdAt?: Date;
 }
 
+interface NewProductForm {
+  name: string;
+  description: string;
+  price: string;
+  discountPrice: string;
+  stock: string;
+  category: string;
+  images: (string | File)[];
+  sku: string;
+  brandName: string;
+  tags: string;
+  colors: string[];
+  sizes: string[];
+  weight: {
+    value: string;
+    unit: string;
+  };
+  dimensions: {
+    length: string;
+    width: string;
+    height: string;
+    unit: string;
+  };
+  returnPolicy: string;
+}
+
 const ProductsPage = () => {
   const location = useLocation();
   const { user, seller } = useAuth();
@@ -79,31 +105,9 @@ const ProductsPage = () => {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [newProduct, setNewProduct] = useState<{
-    name: string;
-    description: string;
-    price: string;
-    discountPrice: string;
-    stock: string;
-    category: string;
-    images: (string | File)[];
-    sku: string;
-    brandName: string;
-    tags: string;
-    colors: string[];
-    sizes: string[];
-    weight: {
-      value: string;
-      unit: string;
-    };
-    dimensions: {
-      length: string;
-      width: string;
-      height: string;
-      unit: string;
-    };
-    returnPolicy: string;
-  }>({
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [newProduct, setNewProduct] = useState<NewProductForm>({
     name: '',
     description: '',
     price: '',
@@ -128,11 +132,9 @@ const ProductsPage = () => {
     },
     returnPolicy: ''
   });
-  const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [selectedStockFilter, setSelectedStockFilter] = useState<string>('all');
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Load products on component mount
   useEffect(() => {
@@ -170,9 +172,9 @@ const ProductsPage = () => {
 
     // Set active tab based on URL
     const pathParts = location.pathname.split('/');
-  if (pathParts.length > 2 && pathParts[2]) {
-    setActiveTab(pathParts[2]);
-  } else {
+    if (pathParts.length > 2 && pathParts[2]) {
+      setActiveTab(pathParts[2]);
+    } else {
       setActiveTab('all');
     }
 
@@ -235,12 +237,12 @@ const ProductsPage = () => {
       );
       
       // Add to Firestore
-      const productData = {
-      name: newProduct.name,
+      const productData: Omit<Product, 'id'> = {
+        name: newProduct.name,
         description: newProduct.description,
-      price: parseFloat(newProduct.price),
-        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : null,
-      stock: parseInt(newProduct.stock),
+        price: parseFloat(newProduct.price),
+        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : undefined,
+        stock: parseInt(newProduct.stock),
         category: newProduct.category,
         images: imageUrls,
         sku: newProduct.sku || generateSKU(newProduct.category),
@@ -251,30 +253,30 @@ const ProductsPage = () => {
         weight: newProduct.weight.value ? {
           value: parseFloat(newProduct.weight.value),
           unit: newProduct.weight.unit
-        } : null,
+        } : undefined,
         dimensions: newProduct.dimensions.length ? {
           length: parseFloat(newProduct.dimensions.length),
           width: parseFloat(newProduct.dimensions.width),
           height: parseFloat(newProduct.dimensions.height),
           unit: newProduct.dimensions.unit
-        } : null,
-        returnPolicy: newProduct.returnPolicy || null,
+        } : undefined,
+        returnPolicy: newProduct.returnPolicy || undefined,
         sellerId: user.uid,
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
       await addDoc(collection(db, 'products'), productData);
-    setShowAddProductModal(false);
-    setNewProduct({
-      name: '',
+      setShowAddProductModal(false);
+      setNewProduct({
+        name: '',
         description: '',
-      price: '',
+        price: '',
         discountPrice: '',
-      stock: '',
+        stock: '',
         category: '',
         images: [],
-      sku: '',
+        sku: '',
         brandName: '',
         tags: '',
         colors: [],
@@ -319,11 +321,11 @@ const ProductsPage = () => {
 
       // Update in Firestore
       const productRef = doc(db, 'products', editingProduct.id);
-      const updateData = {
+      const updateData: Partial<Product> = {
         name: newProduct.name,
         description: newProduct.description,
         price: parseFloat(newProduct.price),
-        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : null,
+        discountPrice: newProduct.discountPrice ? parseFloat(newProduct.discountPrice) : undefined,
         stock: parseInt(newProduct.stock),
         category: newProduct.category,
         images: allImageUrls,
@@ -335,14 +337,14 @@ const ProductsPage = () => {
         weight: newProduct.weight.value ? {
           value: parseFloat(newProduct.weight.value),
           unit: newProduct.weight.unit
-        } : null,
+        } : undefined,
         dimensions: newProduct.dimensions.length ? {
           length: parseFloat(newProduct.dimensions.length),
           width: parseFloat(newProduct.dimensions.width),
           height: parseFloat(newProduct.dimensions.height),
           unit: newProduct.dimensions.unit
-        } : null,
-        returnPolicy: newProduct.returnPolicy || null,
+        } : undefined,
+        returnPolicy: newProduct.returnPolicy || undefined,
         updatedAt: new Date()
       };
 
@@ -535,11 +537,11 @@ const ProductsPage = () => {
           {/* Tabs */}
           <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 mb-6">
             <Link
-  to="/products"
-  className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
->
-  All Products
-</Link>
+              to="/products"
+              className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              All Products
+            </Link>
             <Link
               to="/products/inventory"
               className={`py-2 px-4 font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
@@ -1083,11 +1085,19 @@ const ProductsPage = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {newProduct.images.map((image, index) => (
                           <div key={index} className="relative group">
-                            <img
-                              src={image}
-                              alt={`Product ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg"
-                            />
+                            {typeof image === 'string' ? (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <img
+                                src={URL.createObjectURL(image)}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            )}
                             <button
                               onClick={() => removeImage(index)}
                               className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1443,11 +1453,19 @@ const ProductsPage = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {newProduct.images.map((image, index) => (
                           <div key={index} className="relative group">
-                            <img
-                              src={image}
-                              alt={`Product ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg"
-                            />
+                            {typeof image === 'string' ? (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <img
+                                src={URL.createObjectURL(image)}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            )}
                             <button
                               onClick={() => removeImage(index)}
                               className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
