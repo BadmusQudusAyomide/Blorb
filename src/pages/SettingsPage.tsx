@@ -79,13 +79,13 @@ const SettingsPage = () => {
     const { name, value } = e.target;
     const [parent, child] = name.split('.');
     
-    setFormData(prev => ({
-      ...prev,
-      [parent]: {
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
         ...(prev[parent as keyof typeof prev] as Record<string, unknown>),
-        [child]: value
-      }
-    }));
+          [child]: value
+        }
+      }));
   };
 
   const handleBankAccountChange = (id: string, field: keyof BankAccount, value: string | boolean) => {
@@ -168,13 +168,13 @@ const SettingsPage = () => {
           {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
               {error}
-            </div>
+                  </div>
           )}
 
           {success && (
             <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-md">
               {success}
-            </div>
+                </div>
           )}
 
           <div className="bg-white rounded-lg shadow border border-blue-100">
@@ -209,54 +209,54 @@ const SettingsPage = () => {
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Banking
-                </button>
-              </nav>
-            </div>
+                    </button>
+                </nav>
+              </div>
 
             <div className="p-6">
-              {activeTab === 'profile' && (
+                  {activeTab === 'profile' && (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                      <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                         Full Name
                       </label>
-                      <input
-                        type="text"
+                        <input
+                          type="text"
                         id="name"
-                        name="name"
+                          name="name"
                         value={formData.name}
-                        onChange={handleInputChange}
+                          onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
+                        />
+                      </div>
+                      <div>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                         Email
                       </label>
-                      <input
-                        type="email"
+                        <input
+                          type="email"
                         id="email"
-                        name="email"
+                          name="email"
                         value={formData.email}
-                        onChange={handleInputChange}
+                          onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
+                        />
+                      </div>
+                      <div>
                       <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                         Phone
                       </label>
-                      <input
-                        type="tel"
+                        <input
+                          type="tel"
                         id="phone"
-                        name="phone"
+                          name="phone"
                         value={formData.phone}
-                        onChange={handleInputChange}
+                          onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      />
-                    </div>
-                  </div>
+                        />
+                      </div>
+                        </div>
                   <div className="flex justify-end">
                     <button
                       type="submit"
@@ -264,27 +264,27 @@ const SettingsPage = () => {
                     >
                       Save Changes
                     </button>
-                  </div>
+                    </div>
                 </form>
-              )}
+                  )}
 
-              {activeTab === 'store' && (
+                  {activeTab === 'store' && (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                      <div>
                       <label htmlFor="storeName" className="block text-sm font-medium text-gray-700">
                         Store Name
                       </label>
-                      <input
-                        type="text"
+                        <input
+                          type="text"
                         id="storeName"
-                        name="storeName"
+                          name="storeName"
                         value={formData.storeName}
-                        onChange={handleInputChange}
+                          onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
+                        />
+                      </div>
+                      <div>
                       <label htmlFor="businessType" className="block text-sm font-medium text-gray-700">
                         Business Type
                       </label>
@@ -324,9 +324,9 @@ const SettingsPage = () => {
                         <div className="space-y-1 text-center">
                           {formData.storeLogo ? (
                             <div className="relative">
-                              <img
-                                src={formData.storeLogo}
-                                alt="Store Logo"
+                            <img
+                              src={formData.storeLogo}
+                              alt="Store Logo"
                                 className="mx-auto h-32 w-auto object-contain"
                               />
                               <button
@@ -346,15 +346,15 @@ const SettingsPage = () => {
                                   className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
                                 >
                                   <span>Upload a logo</span>
-                                  <input
+                            <input
                                     id="logo-upload"
-                                    type="file"
-                                    accept="image/*"
+                              type="file"
+                          accept="image/*"
                                     className="sr-only"
                                     onChange={(e) => handleImageUpload(e, 'logo')}
                                     disabled={loading}
                                   />
-                                </label>
+                          </label>
                               </div>
                             </>
                           )}
@@ -369,9 +369,9 @@ const SettingsPage = () => {
                         <div className="space-y-1 text-center">
                           {formData.storeBanner ? (
                             <div className="relative">
-                              <img
-                                src={formData.storeBanner}
-                                alt="Store Banner"
+                            <img
+                              src={formData.storeBanner}
+                              alt="Store Banner"
                                 className="mx-auto h-48 w-full object-cover"
                               />
                               <button
@@ -391,19 +391,19 @@ const SettingsPage = () => {
                                   className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
                                 >
                                   <span>Upload a banner</span>
-                                  <input
+                        <input
                                     id="banner-upload"
-                                    type="file"
-                                    accept="image/*"
+                          type="file"
+                          accept="image/*"
                                     className="sr-only"
                                     onChange={(e) => handleImageUpload(e, 'banner')}
                                     disabled={loading}
                                   />
-                                </label>
-                              </div>
+                          </label>
+                      </div>
                             </>
                           )}
-                        </div>
+                    </div>
                       </div>
                     </div>
                   </div>
@@ -416,47 +416,47 @@ const SettingsPage = () => {
                     </button>
                   </div>
                 </form>
-              )}
+                  )}
 
-              {activeTab === 'banking' && (
+                  {activeTab === 'banking' && (
                 <div className="space-y-6">
-                  {bankAccounts.map((account) => (
+                    {bankAccounts.map((account) => (
                     <div key={account.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
                           <label className="block text-sm font-medium text-gray-700">
                             Bank Name
                           </label>
-                          <input
-                            type="text"
-                            value={account.bankName}
-                            onChange={(e) => handleBankAccountChange(account.id, 'bankName', e.target.value)}
+                              <input
+                                type="text"
+                                value={account.bankName}
+                                onChange={(e) => handleBankAccountChange(account.id, 'bankName', e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          />
-                        </div>
-                        <div>
+                              />
+                            </div>
+                            <div>
                           <label className="block text-sm font-medium text-gray-700">
                             Account Number
                           </label>
-                          <input
-                            type="text"
-                            value={account.accountNumber}
-                            onChange={(e) => handleBankAccountChange(account.id, 'accountNumber', e.target.value)}
+                              <input
+                                type="text"
+                                value={account.accountNumber}
+                                onChange={(e) => handleBankAccountChange(account.id, 'accountNumber', e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          />
-                        </div>
-                        <div>
+                              />
+                            </div>
+                            <div>
                           <label className="block text-sm font-medium text-gray-700">
                             Account Name
                           </label>
-                          <input
-                            type="text"
-                            value={account.accountName}
-                            onChange={(e) => handleBankAccountChange(account.id, 'accountName', e.target.value)}
+                              <input
+                                type="text"
+                                value={account.accountName}
+                                onChange={(e) => handleBankAccountChange(account.id, 'accountName', e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          />
-                        </div>
-                        <div className="flex items-end space-x-4">
+                              />
+                            </div>
+                          <div className="flex items-end space-x-4">
                           <div className="flex items-center">
                             <input
                               type="checkbox"
@@ -469,18 +469,18 @@ const SettingsPage = () => {
                             </label>
                           </div>
                           {bankAccounts.length > 1 && (
-                            <button
+                                <button
                               type="button"
                               onClick={() => removeBankAccount(account.id)}
                               className="text-red-600 hover:text-red-800"
                             >
                               Remove
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                                </button>
+                            )}
+                          </div>
+                          </div>
+              </div>
+            ))}
                   <button
                     type="button"
                     onClick={addBankAccount}
@@ -488,7 +488,7 @@ const SettingsPage = () => {
                   >
                     Add Bank Account
                   </button>
-                </div>
+              </div>
               )}
             </div>
           </div>

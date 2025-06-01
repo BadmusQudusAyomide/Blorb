@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/auth/Login';
@@ -16,7 +16,48 @@ import ShippingPage from './pages/ShippingPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import CarouselPage from './pages/CarouselPage';
+import { WifiOff, X } from 'lucide-react';
 // import AddCategory from './AddCategory';
+
+// Network Status Component
+const NetworkStatus = ({ isOnline }: { isOnline: boolean }) => {
+  const [show, setShow] = useState(!isOnline);
+
+  useEffect(() => {
+    if (!isOnline) {
+      setShow(true);
+    } else {
+      // Hide the notification after 3 seconds when back online
+      const timer = setTimeout(() => {
+        setShow(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOnline]);
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      <div className={`
+        flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg
+        ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+        transition-all duration-300 ease-in-out
+      `}>
+        <WifiOff className="w-5 h-5" />
+        <span className="font-medium">
+          {isOnline ? 'Back online!' : 'No internet connection'}
+        </span>
+        <button
+          onClick={() => setShow(false)}
+          className="ml-2 hover:opacity-70"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // Loading component
 const Loading = () => (
@@ -81,15 +122,31 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <Router>
       <ErrorBoundary>
-      <AuthProvider>
+        <AuthProvider>
           <Suspense fallback={<Loading />}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          {/* <Route path="/add-category" element={<AddCategory />} /> */}
+            <NetworkStatus isOnline={isOnline} />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              {/* <Route path="/add-category" element={<AddCategory />} /> */}
               
               {/* Protected Routes */}
               <Route path="/" element={
@@ -99,63 +156,63 @@ function App() {
               } />
               
               <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <SellerDashboard />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <SellerDashboard />
+                </ProtectedRoute>
               } />
               
               <Route path="/products" element={
-              <ProtectedRoute>
-                <ProductsPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <ProductsPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/products/:tab" element={
-              <ProtectedRoute>
-                <ProductsPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <ProductsPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/orders" element={
-              <ProtectedRoute>
-                <OrdersPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <OrdersPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/orders/:tab" element={
-              <ProtectedRoute>
-                <OrdersPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <OrdersPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/customers" element={
-              <ProtectedRoute>
-                <CustomerPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <CustomerPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/analytics" element={
-              <ProtectedRoute>
-                <AnalyticsPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/analytics/:tab" element={
-              <ProtectedRoute>
-                <AnalyticsPage />
-              </ProtectedRoute>
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/marketing" element={
-    <ProtectedRoute>
-      <MarketingPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <MarketingPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/marketing/:tab" element={
-    <ProtectedRoute>
-      <MarketingPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <MarketingPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/carousel" element={
@@ -165,52 +222,52 @@ function App() {
               } />
               
               <Route path="/finances" element={
-    <ProtectedRoute>
-      <FinancesPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <FinancesPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/finances/:tab" element={
-    <ProtectedRoute>
-      <FinancesPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <FinancesPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/shipping" element={
-    <ProtectedRoute>
-      <ShippingPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <ShippingPage />
+                </ProtectedRoute>
               } />
 
               <Route path="/shipping/:tab" element={
-    <ProtectedRoute>
-      <ShippingPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <ShippingPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/messages" element={
-    <ProtectedRoute>
-      <MessagesPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <MessagesPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/settings" element={
-    <ProtectedRoute>
-      <SettingsPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
               } />
               
               <Route path="/help" element={
-    <ProtectedRoute>
-      <HelpCenterPage />
-    </ProtectedRoute>
+                <ProtectedRoute>
+                  <HelpCenterPage />
+                </ProtectedRoute>
               } />
               
               {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </Suspense>
-      </AuthProvider>
+        </AuthProvider>
       </ErrorBoundary>
     </Router>
   );

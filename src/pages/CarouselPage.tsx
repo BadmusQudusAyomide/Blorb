@@ -279,17 +279,17 @@ const CarouselPage = () => {
         updatedAt: new Date()
       };
 
-      await addDoc(collection(db, 'carousel'), carouselData);
+        await addDoc(collection(db, 'carousel'), carouselData);
       setSuccess('Payment successful! Your carousel ad has been submitted for review.');
-      
+
       // Reset form after successful submission
       setTimeout(() => {
         setCurrentStep(1);
         setSelectedPlan(null);
-        setFormData({
-          title: '',
-          description: '',
-          link: '',
+      setFormData({
+        title: '',
+        description: '',
+        link: '',
           image: ''
         });
         setPaymentData({
@@ -399,17 +399,17 @@ const CarouselPage = () => {
             <>
               <StepIndicator />
 
-              {error && (
+            {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-400 text-red-700 rounded">
-                  {error}
-                </div>
-              )}
+                {error}
+              </div>
+            )}
 
-              {success && (
+            {success && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-400 text-green-700 rounded">
-                  {success}
-                </div>
-              )}
+                {success}
+              </div>
+            )}
 
               {/* Step 1: Plan Selection */}
               {currentStep === 1 && (
@@ -469,123 +469,123 @@ const CarouselPage = () => {
                   <h3 className="text-xl font-semibold text-blue-900 mb-6">Advertisement Details</h3>
                   
                   <div className="space-y-6">
-                    {/* Image Upload */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                         Advertisement Image *
-                      </label>
-                      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-blue-100 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                          {formData.image ? (
-                            <div className="relative">
-                              <img
-                                src={formData.image}
-                                alt="Preview"
+                </label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-blue-100 border-dashed rounded-md">
+                  <div className="space-y-1 text-center">
+                    {formData.image ? (
+                      <div className="relative">
+                        <img
+                          src={formData.image}
+                          alt="Preview"
                                 className="mx-auto h-32 w-auto object-cover rounded"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                              <div className="flex text-sm text-gray-600">
-                                <label
-                                  htmlFor="image-upload"
-                                  className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500"
-                                >
-                                  <span>Upload an image</span>
-                                  <input
-                                    id="image-upload"
-                                    name="image"
-                                    type="file"
-                                    accept="image/*"
-                                    className="sr-only"
-                                    onChange={handleImageUpload}
-                                    disabled={uploading}
-                                  />
-                                </label>
-                              </div>
-                              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                            </>
-                          )}
-                        </div>
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="flex text-sm text-gray-600">
+                          <label
+                            htmlFor="image-upload"
+                                  className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500"
+                          >
+                            <span>Upload an image</span>
+                            <input
+                              id="image-upload"
+                              name="image"
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={handleImageUpload}
+                              disabled={uploading}
+                            />
+                          </label>
+                        </div>
+                              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-                    {/* Title */}
-                    <div>
-                      <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+              {/* Title */}
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700">
                         Advertisement Title *
-                      </label>
-                      <input
-                        type="text"
-                        id="title"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleInputChange}
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="Enter a catchy title for your ad"
-                        required
-                      />
-                    </div>
+                  required
+                />
+              </div>
 
-                    {/* Description */}
-                    <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              {/* Description */}
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                         Description *
-                      </label>
-                      <textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
                         rows={4}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="Describe your product or service"
-                        required
-                      />
-                    </div>
+                  required
+                />
+              </div>
 
-                    {/* Link */}
-                    <div>
-                      <label htmlFor="link" className="block text-sm font-medium text-gray-700">
+              {/* Link */}
+              <div>
+                <label htmlFor="link" className="block text-sm font-medium text-gray-700">
                         Link URL (optional)
-                      </label>
-                      <input
-                        type="text"
-                        id="link"
-                        name="link"
-                        value={formData.link}
-                        onChange={handleInputChange}
+                </label>
+                <input
+                  type="text"
+                  id="link"
+                  name="link"
+                  value={formData.link}
+                  onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="https://yourwebsite.com"
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
+              </div>
 
                   <div className="flex justify-between mt-8">
-                    <button
+                  <button
                       onClick={handlePrev}
                       className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Previous
-                    </button>
-                    <button
+                  </button>
+                <button
                       onClick={handleNext}
-                      disabled={uploading}
+                  disabled={uploading}
                       className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                    >
+                >
                       Next
                       <ArrowRight className="w-4 h-4 ml-2" />
-                    </button>
-                  </div>
+                </button>
+              </div>
                 </div>
               )}
 
@@ -598,8 +598,8 @@ const CarouselPage = () => {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-lg font-medium text-gray-900">Selected Plan</h4>
                       <span className="text-sm text-blue-600 font-medium">{selectedPlan.name}</span>
-                    </div>
-                    
+          </div>
+
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Duration:</span>
@@ -617,7 +617,7 @@ const CarouselPage = () => {
                       <div className="flex justify-between text-lg font-bold">
                         <span>Total:</span>
                         <span className="text-blue-600">{formatNaira(selectedPlan.price + processingFee)}</span>
-                      </div>
+            </div>
                     </div>
                   </div>
 
@@ -983,11 +983,11 @@ const CarouselPage = () => {
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
               )}
             </div>
           )}
@@ -997,4 +997,4 @@ const CarouselPage = () => {
   );
 };
 
-export default CarouselPage;
+export default CarouselPage; 
