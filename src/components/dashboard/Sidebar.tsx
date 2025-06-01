@@ -1,22 +1,17 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 import {
-  Home,
   Package,
   ShoppingCart,
   Users,
   BarChart2,
-  TrendingUp,
-  DollarSign,
   Tag,
-  MessageSquare,
   Truck,
   Settings,
   HelpCircle,
-  Bell,
   Menu,
   X,
   ChevronDown,
@@ -43,10 +38,13 @@ interface NavItem {
   badge?: number;
 }
 
-const Sidebar = () => {
-  const { user, seller } = useAuth();
-  const location = useLocation();
-  const [isOpen, setIsOpen] = useState(true);
+interface SidebarProps {
+  isOpen: boolean;
+  setIsOpen: (value: boolean) => void;
+}
+
+const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
+  const { seller } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [activePath, setActivePath] = useState('/dashboard');
@@ -75,8 +73,6 @@ const Sidebar = () => {
       setIsMobile(isMobileView);
       if (isMobileView) {
         setIsOpen(false);
-      } else {
-        setIsOpen(true);
       }
     };
     
@@ -86,7 +82,7 @@ const Sidebar = () => {
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
-  }, []);
+  }, [setIsOpen]);
   
   useEffect(() => {
     if (isMobile && isOpen) {
@@ -341,26 +337,18 @@ const Sidebar = () => {
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">
           {isOpen ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-800 font-medium">
-                      {seller?.name?.charAt(0) || 'S'}
-                    </span>
-                  </div>
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+            <div className="flex items-center">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-blue-800 font-medium">
+                    {seller?.name?.charAt(0) || 'S'}
+                  </span>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700">{seller?.name || 'Seller'}</p>
-                  <p className="text-xs text-gray-500">{seller?.storeName || 'Store'}</p>
-                </div>
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
               </div>
-              <div className="flex">
-                <button className="p-1 rounded-md hover:bg-blue-50 relative">
-                  <Bell className="w-5 h-5 text-blue-800" />
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-700">{seller?.name || 'Seller'}</p>
+                <p className="text-xs text-gray-500">{seller?.storeName || 'Store'}</p>
               </div>
             </div>
           ) : (

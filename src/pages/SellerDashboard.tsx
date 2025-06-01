@@ -74,14 +74,15 @@ const getStatusClass = (status: string) => {
 const SellerDashboard = () => {
   const { user, seller } = useAuth();
   const [stats, setStats] = useState({
-    totalSales: 0,
     totalOrders: 0,
-    totalCustomers: 0,
-    totalProducts: 0
+    totalProducts: 0,
+    totalRevenue: 0,
+    growthRate: 0
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(true);
 
   // Calculate stats
   const totalProducts = stats.totalProducts;
@@ -185,13 +186,13 @@ const SellerDashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white">
-        <Sidebar />
-        <TopBar />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+        <TopBar setIsOpen={setIsOpen} />
         <main className="pt-16 pl-0 lg:pl-64">
           <div className="p-4 md:p-6">
-            <div className="bg-red-50 p-4 rounded-md">
-              <p className="text-red-800">{error}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md">
+              <p className="text-red-800 dark:text-red-200">{error}</p>
             </div>
           </div>
         </main>
@@ -200,9 +201,9 @@ const SellerDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <TopBar />
+    <div className="min-h-screen bg-white">
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">
