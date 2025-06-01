@@ -413,14 +413,14 @@ const CarouselPage = () => {
 
               {/* Step 1: Plan Selection */}
               {currentStep === 1 && (
-                <div className="bg-white rounded-lg shadow border border-blue-100 p-6">
-                  <h3 className="text-xl font-semibold text-blue-900 mb-6">Choose Your Plan</h3>
-                  <div className="grid md:grid-cols-3 gap-6">
+                <div className="bg-white rounded-lg shadow border border-blue-100 p-4">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Choose Your Plan</h3>
+                  <div className="grid md:grid-cols-3 gap-4">
                     {plans.map((plan) => (
                       <div
                         key={plan.id}
                         className={`
-                          relative border-2 rounded-lg p-6 cursor-pointer transition-all
+                          relative border-2 rounded-lg p-4 cursor-pointer transition-all
                           ${plan.popular 
                             ? 'border-blue-500 bg-blue-50' 
                             : 'border-gray-200 hover:border-blue-300'
@@ -429,32 +429,32 @@ const CarouselPage = () => {
                         onClick={() => handlePlanSelect(plan)}
                       >
                         {plan.popular && (
-                          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                            <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                              <Star className="w-4 h-4 mr-1" />
+                          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                            <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center">
+                              <Star className="w-3 h-3 mr-1" />
                               Popular
                             </span>
                           </div>
                         )}
                         
-                        <div className="text-center mb-4">
-                          <h4 className="text-lg font-semibold text-blue-900">{plan.name}</h4>
-                          <div className="mt-2">
-                            <span className="text-3xl font-bold text-blue-600">{formatNaira(plan.price)}</span>
+                        <div className="text-center mb-3">
+                          <h4 className="text-base font-semibold text-blue-900">{plan.name}</h4>
+                          <div className="mt-1">
+                            <span className="text-2xl font-bold text-blue-600">{formatNaira(plan.price)}</span>
                           </div>
-                          <p className="text-gray-600 mt-1">{plan.days} days display</p>
+                          <p className="text-sm text-gray-600">{plan.days} days display</p>
                         </div>
 
-                        <ul className="space-y-2 mb-6">
+                        <ul className="space-y-1 mb-4">
                           {plan.features.map((feature, index) => (
-                            <li key={index} className="flex items-center text-sm">
-                              <Check className="w-4 h-4 text-green-500 mr-2" />
+                            <li key={index} className="flex items-center text-xs">
+                              <Check className="w-3 h-3 text-green-500 mr-1" />
                               {feature}
                             </li>
                           ))}
                         </ul>
 
-                        <button className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        <button className="w-full bg-blue-600 text-white py-1.5 text-sm rounded-md hover:bg-blue-700 transition-colors">
                           Select Plan
                         </button>
                       </div>
