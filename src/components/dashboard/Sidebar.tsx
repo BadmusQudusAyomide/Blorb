@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 import {
@@ -22,7 +22,11 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
-  Image
+  Image,
+  LayoutDashboard,
+  Megaphone,
+  Wallet,
+  MessageCircle
 } from 'lucide-react';
 
 interface SubItem {
@@ -40,7 +44,8 @@ interface NavItem {
 }
 
 const Sidebar = () => {
-  const { seller } = useAuth();
+  const { user, seller } = useAuth();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
@@ -98,7 +103,7 @@ const Sidebar = () => {
   const navItems: NavItem[] = [
     {
       label: 'Dashboard',
-      icon: <Home className="w-5 h-5" />,
+      icon: <LayoutDashboard className="w-5 h-5" />,
       path: '/dashboard',
     },
     {
@@ -141,7 +146,7 @@ const Sidebar = () => {
     },
     {
       label: 'Marketing',
-      icon: <TrendingUp className="w-5 h-5" />,
+      icon: <Megaphone className="w-5 h-5" />,
       key: 'marketing',
       subItems: [
         { label: 'Campaigns', path: '/marketing/campaigns' },
@@ -156,7 +161,7 @@ const Sidebar = () => {
     },
     {
       label: 'Finances',
-      icon: <DollarSign className="w-5 h-5" />,
+      icon: <Wallet className="w-5 h-5" />,
       key: 'finances',
       subItems: [
         { label: 'Transactions', path: '/finances/transactions' },
@@ -171,7 +176,7 @@ const Sidebar = () => {
     },
     {
       label: 'Messages',
-      icon: <MessageSquare className="w-5 h-5" />,
+      icon: <MessageCircle className="w-5 h-5" />,
       path: '/messages',
       badge: 3,
     },

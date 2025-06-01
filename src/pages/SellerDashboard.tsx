@@ -216,14 +216,14 @@ const SellerDashboard = () => {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {statsCards.map((stat, index) => (
-              <div key={index} className="bg-blue-800 rounded-lg shadow p-6 border border-blue-700 transition-all duration-150 hover:shadow-md">
+              <div key={index} className="bg-indigo-800 rounded-lg shadow p-6 border border-indigo-700 transition-all duration-150 hover:shadow-md">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm font-medium text-blue-100">{stat.title}</p>
+                    <p className="text-sm font-medium text-indigo-100">{stat.title}</p>
                     <p className="text-2xl font-semibold text-white mt-1">{stat.value}</p>
-                    <p className="text-sm text-blue-200 mt-1">{stat.change}</p>
+                    <p className="text-sm text-indigo-200 mt-1">{stat.change}</p>
                   </div>
-                  <div className="p-2 rounded-lg bg-blue-700">
+                  <div className="p-2 rounded-lg bg-indigo-700">
                     {stat.icon}
                   </div>
                 </div>
@@ -235,13 +235,13 @@ const SellerDashboard = () => {
           <div className="bg-white rounded-lg shadow border border-gray-200 mb-8">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-800">Recent Orders</h3>
-              <button className="text-sm text-blue-800 hover:text-blue-600">
+              <button className="text-sm text-indigo-800 hover:text-indigo-600">
                 View All Orders
               </button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-blue-800">
+                <thead className="bg-indigo-800">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
@@ -251,8 +251,8 @@ const SellerDashboard = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {recentOrders.slice(0, 5).map((order) => (
-                    <tr key={order.id} className="hover:bg-blue-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-800">#{order.orderNumber}</td>
+                    <tr key={order.id} className="hover:bg-indigo-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-800">#{order.orderNumber}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(order.sellerStatuses[user?.uid || '']?.status || 'pending')}`}>
                           {order.sellerStatuses[user?.uid || '']?.status?.charAt(0).toUpperCase() + order.sellerStatuses[user?.uid || '']?.status?.slice(1) || 'Pending'}
@@ -273,13 +273,13 @@ const SellerDashboard = () => {
           <div className="bg-white rounded-lg shadow border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-800">Recent Products</h3>
-              <button className="text-sm text-blue-800 hover:text-blue-600">
+              <button className="text-sm text-indigo-800 hover:text-indigo-600">
                 View All Products
               </button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-blue-800">
+                <thead className="bg-indigo-800">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Product</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Category</th>
@@ -289,7 +289,7 @@ const SellerDashboard = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {recentProducts.slice(0, 5).map((product) => (
-                    <tr key={product.id} className="hover:bg-blue-50 transition-colors duration-150">
+                    <tr key={product.id} className="hover:bg-indigo-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {product.images[0] && (
