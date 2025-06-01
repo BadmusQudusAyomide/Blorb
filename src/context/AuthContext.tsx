@@ -11,7 +11,8 @@ import {
   onAuthStateChanged,
   type AuthError,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
@@ -55,6 +56,7 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   updateSellerProfile: (sellerData: Partial<Seller>) => Promise<void>;
   error: string | null;
   loading: boolean;
@@ -121,11 +123,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
+      console.log('Attempting login with:', { email }); // Log attempt (without password for security)
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/dashboard');
     } catch (err) {
       const error = err as AuthError;
-      setError(getFirebaseErrorMessage(error));
+      console.error('Login error details:', {
+        code: error.code,
+        message: error.message,
+        email: email
+      });
+      const errorMessage = getFirebaseErrorMessage(error);
+      setError(errorMessage);
       throw error;
     } finally {
       setLoading(false);
@@ -257,23 +266,73 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('Attempting to send password reset email to:', email);
+      await sendPasswordResetEmail(auth, email, {
+        url: window.location.origin + '/login', // This will redirect back to login page after reset
+        handleCodeInApp: true
+      });
+      console.log('Password reset email sent successfully');
+      setError('Password reset email sent. Please check your inbox and spam folder.');
+    } catch (err) {
+      const error = err as AuthError;
+      console.error('Password reset error details:', {
+        code: error.code,
+        message: error.message,
+        email: email,
+        fullError: error
+      });
+      
+      // Handle specific error cases
+      if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email address. Please sign up first.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please try again later.');
+      } else {
+        const errorMessage = getFirebaseErrorMessage(error);
+        setError(errorMessage);
+      }
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Helper function to get user-friendly error messages
   const getFirebaseErrorMessage = (error: AuthError): string => {
     switch (error.code) {
       case 'auth/invalid-email':
-        return 'Invalid email address';
+        return 'Please enter a valid email address';
       case 'auth/user-disabled':
-        return 'Account disabled';
+        return 'This account has been disabled. Please contact support';
       case 'auth/user-not-found':
-        return 'No account found with this email';
+        return 'No account found with this email. Please sign up first';
       case 'auth/wrong-password':
-        return 'Incorrect password';
+        return 'Incorrect password. Please try again';
+      case 'auth/invalid-credential':
+        return 'Invalid email or password. Please check your credentials and try again';
       case 'auth/email-already-in-use':
-        return 'Email already in use';
+        return 'This email is already registered. Please try logging in';
       case 'auth/weak-password':
-        return 'Password is too weak';
+        return 'Password should be at least 6 characters long';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please try again later';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection';
+      case 'auth/operation-not-allowed':
+        return 'Email/password sign in is not enabled. Please contact support';
       default:
-        return 'An error occurred. Please try again.';
+        console.error('Firebase auth error:', {
+          code: error.code,
+          message: error.message,
+          fullError: error
+        });
+        return 'An error occurred during sign in. Please try again';
     }
   };
 
@@ -284,6 +343,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signup,
     loginWithGoogle,
     logout,
+    resetPassword,
     updateSellerProfile,
     error,
     loading

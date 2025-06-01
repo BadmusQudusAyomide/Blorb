@@ -9,7 +9,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { login, loginWithGoogle, error, loading } = useAuth();
+  const [localError, setLocalError] = useState<string | null>(null);
+  const { login, loginWithGoogle, resetPassword, error, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,6 +27,18 @@ const Login = () => {
     try {
       await loginWithGoogle();
       navigate('/');
+    } catch {
+      // Error is handled by the AuthContext
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setLocalError('Please enter your email address first');
+      return;
+    }
+    try {
+      await resetPassword(email);
     } catch {
       // Error is handled by the AuthContext
     }
@@ -51,7 +64,7 @@ const Login = () => {
             </p>
           </div>
 
-          {error && (
+          {(error || localError) && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -60,7 +73,7 @@ const Login = () => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                  <p className="text-sm text-red-700">{error || localError}</p>
                 </div>
               </div>
             </div>
@@ -135,9 +148,21 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                  Forgot password?
-                </Link>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="font-medium text-blue-600 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Sending reset link...
+                    </>
+                  ) : (
+                    'Forgot password?'
+                  )}
+                </button>
               </div>
             </div>
 
@@ -167,7 +192,7 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-1 gap-3">
               <button
                 onClick={handleGoogleLogin}
                 disabled={loading}
@@ -180,20 +205,6 @@ const Login = () => {
                   />
                 </svg>
                 <span className="ml-2">Google</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    fill="currentColor"
-                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                  />
-                </svg>
-                <span className="ml-2">Facebook</span>
               </button>
             </div>
           </div>
