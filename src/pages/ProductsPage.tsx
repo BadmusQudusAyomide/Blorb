@@ -99,6 +99,7 @@ interface NewProductForm {
 const ProductsPage = () => {
   const location = useLocation();
   const { user, seller } = useAuth();
+  const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -509,8 +510,8 @@ const ProductsPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">

@@ -54,12 +54,13 @@ const FinancesPage = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [payoutAmount, setPayoutAmount] = useState<string>('');
   const [payoutSuccess, setPayoutSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [isOpen, setIsOpen] = useState(true);
 
   const fetchTransactions = useCallback(async () => {
     if (!user?.uid) return;
@@ -124,7 +125,7 @@ const FinancesPage = () => {
       if (sellerDoc.exists()) {
         const sellerData = sellerDoc.data();
         if (sellerData.bankDetails) {
-          setBankAccount(sellerData.bankDetails);
+          setBankAccounts([sellerData.bankDetails]);
         }
       }
     } catch (error) {
@@ -210,7 +211,7 @@ const FinancesPage = () => {
   };
 
   const handlePayoutRequest = async () => {
-    if (!user?.uid || !bankAccount) return;
+    if (!user?.uid || !bankAccounts.length) return;
     
     const amount = parseFloat(payoutAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -226,7 +227,7 @@ const FinancesPage = () => {
       status: 'requested',
       method: 'bank',
         reference: `PAY-${Date.now()}`,
-        bankAccountId: bankAccount.accountNumber,
+        bankAccountId: bankAccounts[0].accountNumber,
         date: Timestamp.now()
       };
 
@@ -255,8 +256,8 @@ const FinancesPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">
@@ -315,7 +316,7 @@ const FinancesPage = () => {
                   </label>
                   <input
                     type="text"
-                    value={bankAccount?.accountNumber || ''}
+                    value={bankAccounts.length ? bankAccounts[0].accountNumber : ''}
                     readOnly
                     className="w-full px-3 py-2 border border-blue-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -327,7 +328,7 @@ const FinancesPage = () => {
                   </p>
                   <button
                     onClick={handlePayoutRequest}
-                    disabled={loading || !bankAccount || availableBalance <= 0}
+                    disabled={loading || !bankAccounts.length || availableBalance <= 0}
                     className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Request Payout'}

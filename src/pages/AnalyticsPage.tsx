@@ -42,6 +42,7 @@ const AnalyticsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [stats, setStats] = useState<StatCard[]>([]);
+  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -119,8 +120,8 @@ const AnalyticsPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">

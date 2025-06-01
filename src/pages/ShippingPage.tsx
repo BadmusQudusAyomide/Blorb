@@ -1,12 +1,15 @@
 import { Truck } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
+import { useState } from 'react';
 
 const ShippingPage = () => {
+  const [isOpen, setIsOpen] = useState(true);
+
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">

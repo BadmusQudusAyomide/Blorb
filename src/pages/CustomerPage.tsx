@@ -17,6 +17,7 @@ interface Customer {
 
 const CustomersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(true);
   
   // Mock customer data - in a real app, this would come from an API
   const customers: Customer[] = [
@@ -84,8 +85,8 @@ const CustomersPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">

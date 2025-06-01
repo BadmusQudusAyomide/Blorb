@@ -30,6 +30,7 @@ const CarouselPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [editingItem, setEditingItem] = useState<CarouselItem | null>(null);
+  const [isOpen, setIsOpen] = useState(true);
   const [formData, setFormData] = useState<Partial<CarouselItem>>({
     title: '',
     description: '',
@@ -181,8 +182,8 @@ const CarouselPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
       <main className="pt-16 pl-0 lg:pl-64">
         <div className="p-6">

@@ -2,8 +2,11 @@ import { HelpCircle, BookOpen, Phone, Mail, Zap } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
 import { MessageCircle } from 'lucide-react';
+import { useState } from 'react';
 
 const HelpCenterPage = () => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const helpTopics = [
     {
       title: "Getting Started",
@@ -51,10 +54,10 @@ const HelpCenterPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      <TopBar />
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <TopBar setIsOpen={setIsOpen} />
       
-      <main className="pt-16 pl-0 lg:pl-64">
+      <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-6">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-blue-900">Help Center</h2>
