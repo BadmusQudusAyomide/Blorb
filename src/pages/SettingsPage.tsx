@@ -77,15 +77,24 @@ const SettingsPage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const [parent, child] = name.split('.');
     
+    // Check if the field is nested (contains a dot)
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
       setFormData(prev => ({
         ...prev,
         [parent]: {
-        ...(prev[parent as keyof typeof prev] as Record<string, unknown>),
+          ...((prev[parent as keyof typeof prev] as Record<string, unknown>) || {}),
           [child]: value
         }
       }));
+    } else {
+      // Handle direct fields
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleBankAccountChange = (id: string, field: keyof BankAccount, value: string | boolean) => {
