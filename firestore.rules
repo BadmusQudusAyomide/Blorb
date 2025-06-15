@@ -17,15 +17,29 @@ service cloud.firestore {
                     exists(/databases/$(database)/documents/sellers/$(request.auth.uid))); // Sellers can write
     }
 
-    // Categories collection rules
+    // Categories collection rules (UPDATED FOR SUBCATEGORIES)
     match /categories/{categoryId} {
       allow read: if true; // Publicly readable
+      
+      // Allow creation by admins or sellers (for seller-specific categories)
       allow create: if request.auth != null && 
                    (request.auth.token.isAdmin == true || 
-                    request.resource.data.sellerId == request.auth.uid);
+                    (request.resource.data.keys().hasAny(['sellerId']) && 
+                     request.resource.data.sellerId == request.auth.uid) ||
+                    (!request.resource.data.keys().hasAny(['sellerId']) && 
+                     exists(/databases/$(database)/documents/sellers/$(request.auth.uid))));
+      
+      // Allow update by admins or sellers (for seller-specific categories) or for adding subcategories
       allow update: if request.auth != null && 
                    (request.auth.token.isAdmin == true || 
-                    resource.data.sellerId == request.auth.uid);
+                    (resource.data.keys().hasAny(['sellerId']) && 
+                     resource.data.sellerId == request.auth.uid) ||
+                    (!resource.data.keys().hasAny(['sellerId']) && 
+                     exists(/databases/$(database)/documents/sellers/$(request.auth.uid)) &&
+                     // Allow adding subcategories to system categories
+                     (request.resource.data.keys().hasAny(['subcategories']) || 
+                      request.resource.data.keys().hasAny(['updatedAt']))));
+      
       allow delete: if false; // No deletion for safety
     }
 

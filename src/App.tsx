@@ -17,7 +17,7 @@ import SettingsPage from './pages/SettingsPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import CarouselPage from './pages/CarouselPage';
 import { WifiOff, X } from 'lucide-react';
-// import AddCategory from './AddCategory';
+import AddCategory from './AddCategory';
 
 // Network Status Component
 const NetworkStatus = ({ isOnline }: { isOnline: boolean }) => {
@@ -146,7 +146,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              {/* <Route path="/add-category" element={<AddCategory />} /> */}
+               <Route path="/add-category" element={<AddCategory />} /> 
               
               {/* Protected Routes */}
               <Route path="/" element={

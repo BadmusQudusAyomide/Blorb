@@ -78,7 +78,6 @@ const SettingsPage = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Check if the field is nested (contains a dot)
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
@@ -89,7 +88,7 @@ const SettingsPage = () => {
         }
       }));
     } else {
-      // Handle direct fields
+    
       setFormData(prev => ({
         ...prev,
         [name]: value
