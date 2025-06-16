@@ -292,6 +292,13 @@ const ProductsPage = () => {
         updatedAt: new Date(),
       };
 
+      // Remove any undefined values from the update data
+      Object.keys(productData).forEach((key) => {
+        if (productData[key as keyof typeof productData] === undefined) {
+          delete productData[key as keyof typeof productData];
+        }
+      });
+
       await addDoc(collection(db, "products"), productData);
       setShowAddProductModal(false);
       setNewProduct({
