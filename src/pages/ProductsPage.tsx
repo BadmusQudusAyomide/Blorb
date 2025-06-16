@@ -347,6 +347,27 @@ const ProductsPage = () => {
       // Combine all image URLs
       const allImageUrls = [...existingImageUrls, ...newImageUrls];
 
+      // Prepare dimensions object only if all values are present
+      const dimensions =
+        newProduct.dimensions.length &&
+        newProduct.dimensions.width &&
+        newProduct.dimensions.height
+          ? {
+              length: parseFloat(newProduct.dimensions.length),
+              width: parseFloat(newProduct.dimensions.width),
+              height: parseFloat(newProduct.dimensions.height),
+              unit: newProduct.dimensions.unit,
+            }
+          : null;
+
+      // Prepare weight object only if value is present
+      const weight = newProduct.weight.value
+        ? {
+            value: parseFloat(newProduct.weight.value),
+            unit: newProduct.weight.unit,
+          }
+        : null;
+
       // Update in Firestore
       const productRef = doc(db, "products", editingProduct.id);
       const updateData: Partial<Product> = {
@@ -355,10 +376,10 @@ const ProductsPage = () => {
         price: parseFloat(newProduct.price),
         discountPrice: newProduct.discountPrice
           ? parseFloat(newProduct.discountPrice)
-          : undefined,
+          : null,
         stock: parseInt(newProduct.stock),
         category: newProduct.category,
-        subcategory: newProduct.subcategory || undefined,
+        subcategory: newProduct.subcategory || null,
         images: allImageUrls,
         sku: newProduct.sku,
         brandName: newProduct.brandName || "No Brand",
@@ -367,23 +388,18 @@ const ProductsPage = () => {
           : [],
         colors: newProduct.colors,
         sizes: newProduct.sizes,
-        weight: newProduct.weight.value
-          ? {
-              value: parseFloat(newProduct.weight.value),
-              unit: newProduct.weight.unit,
-            }
-          : undefined,
-        dimensions: newProduct.dimensions.length
-          ? {
-              length: parseFloat(newProduct.dimensions.length),
-              width: parseFloat(newProduct.dimensions.width),
-              height: parseFloat(newProduct.dimensions.height),
-              unit: newProduct.dimensions.unit,
-            }
-          : undefined,
-        returnPolicy: newProduct.returnPolicy || undefined,
+        weight: weight,
+        dimensions: dimensions,
+        returnPolicy: newProduct.returnPolicy || null,
         updatedAt: new Date(),
       };
+
+      // Remove any undefined values from the update data
+      Object.keys(updateData).forEach((key) => {
+        if (updateData[key as keyof typeof updateData] === undefined) {
+          delete updateData[key as keyof typeof updateData];
+        }
+      });
 
       await updateDoc(productRef, updateData);
 
