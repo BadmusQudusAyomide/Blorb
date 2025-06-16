@@ -358,7 +358,7 @@ const ProductsPage = () => {
               height: parseFloat(newProduct.dimensions.height),
               unit: newProduct.dimensions.unit,
             }
-          : null;
+          : undefined;
 
       // Prepare weight object only if value is present
       const weight = newProduct.weight.value
@@ -366,7 +366,7 @@ const ProductsPage = () => {
             value: parseFloat(newProduct.weight.value),
             unit: newProduct.weight.unit,
           }
-        : null;
+        : undefined;
 
       // Update in Firestore
       const productRef = doc(db, "products", editingProduct.id);
@@ -376,10 +376,10 @@ const ProductsPage = () => {
         price: parseFloat(newProduct.price),
         discountPrice: newProduct.discountPrice
           ? parseFloat(newProduct.discountPrice)
-          : null,
+          : undefined,
         stock: parseInt(newProduct.stock),
         category: newProduct.category,
-        subcategory: newProduct.subcategory || null,
+        subcategory: newProduct.subcategory || undefined,
         images: allImageUrls,
         sku: newProduct.sku,
         brandName: newProduct.brandName || "No Brand",
@@ -388,9 +388,9 @@ const ProductsPage = () => {
           : [],
         colors: newProduct.colors,
         sizes: newProduct.sizes,
-        weight: weight,
-        dimensions: dimensions,
-        returnPolicy: newProduct.returnPolicy || null,
+        weight: weight || undefined,
+        dimensions: dimensions || undefined,
+        returnPolicy: newProduct.returnPolicy || undefined,
         updatedAt: new Date(),
       };
 
