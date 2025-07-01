@@ -1,29 +1,29 @@
 // src/pages/OrdersPage.tsx
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase.config';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import { db } from "../firebase.config";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
   onSnapshot,
   doc,
   updateDoc,
   Timestamp,
   arrayUnion,
-  getDoc
-} from 'firebase/firestore';
+  getDoc,
+} from "firebase/firestore";
 import {
   ShoppingCart,
   Clock,
   CheckCircle,
   XCircle,
   Truck,
-  Search
-} from 'lucide-react';
-import TopBar from '../components/dashboard/TopBar';
-import Sidebar from '../components/dashboard/Sidebar';
+  Search,
+} from "lucide-react";
+import TopBar from "../components/dashboard/TopBar";
+import Sidebar from "../components/dashboard/Sidebar";
 
 interface OrderItem {
   id: string;
@@ -34,7 +34,7 @@ interface OrderItem {
   selectedColor?: string;
   selectedSize?: string;
   sellerId: string;
-  sellerStatus: 'pending' | 'approved' | 'rejected' | 'shipped' | 'delivered';
+  sellerStatus: "pending" | "approved" | "rejected" | "shipped" | "delivered";
   sellerNotes?: string;
   trackingNumber?: string;
   shippedAt: Date | null;
@@ -48,14 +48,21 @@ interface Order {
   buyerName: string;
   buyerEmail: string;
   sellerIds: string[];
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   items: { [key: string]: OrderItem };
   sellerItems: {
     [sellerId: string]: OrderItem[];
   };
   sellerStatuses: {
     [sellerId: string]: {
-      status: 'pending' | 'approved' | 'rejected' | 'shipped' | 'delivered';
+      status: "pending" | "approved" | "rejected" | "shipped" | "delivered";
       approvedAt: Date | null;
       shippedAt: Date | null;
       deliveredAt: Date | null;
@@ -94,12 +101,14 @@ const OrdersPage = () => {
   const { user, seller } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [processingOrder, setProcessingOrder] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [activeTab, setActiveTab] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const ordersPerPage = 10;
 
@@ -107,59 +116,60 @@ const OrdersPage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     orderId: string;
-    action: 'approved' | 'rejected';
+    action: "approved" | "rejected";
   } | null>(null);
 
   // Fetch orders
   useEffect(() => {
     if (!user) {
-      setError('User not authenticated');
+      setError("User not authenticated");
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    console.log('Current user:', {
+    console.log("Current user:", {
       uid: user.uid,
       email: user.email,
-      sellerId: seller?.id
+      sellerId: seller?.id,
     });
 
-    const ordersRef = collection(db, 'orders');
+    const ordersRef = collection(db, "orders");
     const q = query(
       ordersRef,
-      where('sellerIds', 'array-contains', user.uid),
-      orderBy('createdAt', 'desc')
+      where("sellerIds", "array-contains", user.uid),
+      orderBy("createdAt", "desc")
     );
 
-    console.log('Fetching orders for seller:', user.uid);
+    console.log("Fetching orders for seller:", user.uid);
 
-    const unsubscribe = onSnapshot(q, 
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
-        const ordersData = snapshot.docs.map(doc => {
+        const ordersData = snapshot.docs.map((doc) => {
           const data = doc.data();
-          console.log('Order data:', {
+          console.log("Order data:", {
             id: doc.id,
             sellerIds: data.sellerIds,
             sellerItems: data.sellerItems,
             items: data.items,
             buyerId: data.buyerId,
-            buyerName: data.buyerName
+            buyerName: data.buyerName,
           });
           return {
             id: doc.id,
-            ...data
+            ...data,
           };
         }) as Order[];
-        console.log('Fetched orders:', ordersData);
+        console.log("Fetched orders:", ordersData);
         setOrders(ordersData);
         setLoading(false);
         setError(null);
-      }, 
+      },
       (error) => {
-        console.error('Error fetching orders:', error);
-        setError('Failed to fetch orders. Please try again.');
+        console.error("Error fetching orders:", error);
+        setError("Failed to fetch orders. Please try again.");
         setLoading(false);
       }
     );
@@ -168,18 +178,25 @@ const OrdersPage = () => {
   }, [user, seller]);
 
   // Filter orders based on search query and active tab
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = searchQuery === '' || 
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      searchQuery === "" ||
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.buyerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.shippingInfo.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.shippingInfo.lastName.toLowerCase().includes(searchQuery.toLowerCase());
+      order.shippingInfo.firstName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      order.shippingInfo.lastName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
-    const sellerStatus = order.sellerStatuses[user?.uid || '']?.status || 'pending';
-    const matchesTab = activeTab === 'all' || 
-      (activeTab === 'pending' && sellerStatus === 'pending') ||
-      (activeTab === 'approved' && sellerStatus === 'approved') ||
-      (activeTab === 'rejected' && sellerStatus === 'rejected');
+    const sellerStatus =
+      order.sellerStatuses?.[user?.uid || ""]?.status || "pending";
+    const matchesTab =
+      activeTab === "all" ||
+      (activeTab === "pending" && sellerStatus === "pending") ||
+      (activeTab === "approved" && sellerStatus === "approved") ||
+      (activeTab === "rejected" && sellerStatus === "rejected");
 
     return matchesSearch && matchesTab;
   });
@@ -187,16 +204,22 @@ const OrdersPage = () => {
   // Pagination logic
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const currentOrders = filteredOrders.slice(
+    indexOfFirstOrder,
+    indexOfLastOrder
+  );
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
   // Update the handleOrderStatusUpdate function
-  const handleOrderStatusUpdate = async (orderId: string, newStatus: 'approved' | 'rejected') => {
+  const handleOrderStatusUpdate = async (
+    orderId: string,
+    newStatus: "approved" | "rejected"
+  ) => {
     if (!user) return;
-    
+
     setPendingAction({
       orderId,
-      action: newStatus
+      action: newStatus,
     });
     setShowConfirmModal(true);
   };
@@ -204,35 +227,62 @@ const OrdersPage = () => {
   // Add new function to handle the confirmed action
   const handleConfirmedAction = async () => {
     if (!user || !pendingAction) return;
-    
+
     setProcessingOrder(pendingAction.orderId);
     try {
-      const orderRef = doc(db, 'orders', pendingAction.orderId);
-      const order = orders.find(o => o.id === pendingAction.orderId);
-      
+      const orderRef = doc(db, "orders", pendingAction.orderId);
+      const order = orders.find((o) => o.id === pendingAction.orderId);
+
       if (!order) return;
+
+      // Defensive: Check for sellerStatuses and sellerItems for this user
+      if (!order.sellerStatuses || !order.sellerStatuses[user.uid]) {
+        alert(
+          "Order data is missing seller status for this seller. Please contact support."
+        );
+        setProcessingOrder(null);
+        setShowConfirmModal(false);
+        setPendingAction(null);
+        return;
+      }
+      if (!order.sellerItems || !order.sellerItems[user.uid]) {
+        alert(
+          "Order data is missing seller items for this seller. Please contact support."
+        );
+        setProcessingOrder(null);
+        setShowConfirmModal(false);
+        setPendingAction(null);
+        return;
+      }
 
       const status = pendingAction.action;
       const timestamp = new Date().toISOString();
-      
+
       await updateDoc(orderRef, {
         [`sellerStatuses.${user.uid}.status`]: status,
-        [`sellerStatuses.${user.uid}.approvedAt`]: status === 'approved' ? Timestamp.now() : null,
-        [`sellerStatuses.${user.uid}.notes`]: status === 'approved' ? 'Order approved by seller' : 'Order rejected by seller',
+        [`sellerStatuses.${user.uid}.approvedAt`]:
+          status === "approved" ? Timestamp.now() : null,
+        [`sellerStatuses.${user.uid}.notes`]:
+          status === "approved"
+            ? "Order approved by seller"
+            : "Order rejected by seller",
         updatedAt: Timestamp.now(),
         statusHistory: arrayUnion({
           status: status,
           timestamp: timestamp,
           updatedBy: user.uid,
-          notes: status === 'approved' ? 'Order approved by seller' : 'Order rejected by seller'
-        })
+          notes:
+            status === "approved"
+              ? "Order approved by seller"
+              : "Order rejected by seller",
+        }),
       });
 
       // Update individual items status
       const sellerItems = order.sellerItems[user.uid] || [];
       for (const item of sellerItems) {
         await updateDoc(orderRef, {
-          [`items.${item.id}.sellerStatus`]: status
+          [`items.${item.id}.sellerStatus`]: status,
         });
       }
 
@@ -240,7 +290,7 @@ const OrdersPage = () => {
       setShowConfirmModal(false);
       setPendingAction(null);
     } catch (error) {
-      console.error('Error updating order status:', error);
+      console.error("Error updating order status:", error);
       setProcessingOrder(null);
       setShowConfirmModal(false);
       setPendingAction(null);
@@ -250,41 +300,41 @@ const OrdersPage = () => {
   // Modify the getStatusClass function to include new statuses
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'approved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'shipped':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-      case 'delivered':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+      case "approved":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "rejected":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+      case "processing":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+      case "shipped":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+      case "delivered":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
     }
   };
 
   // Modify the getStatusIcon function to include new statuses
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
+      case "pending":
         return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'approved':
+      case "approved":
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'rejected':
+      case "rejected":
         return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'processing':
+      case "processing":
         return <Truck className="w-4 h-4 text-blue-500" />;
-      case 'shipped':
+      case "shipped":
         return <Truck className="w-4 h-4 text-purple-500" />;
-      case 'delivered':
+      case "delivered":
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'cancelled':
+      case "cancelled":
         return <XCircle className="w-4 h-4 text-red-500" />;
       default:
         return <ShoppingCart className="w-4 h-4 text-gray-500" />;
@@ -293,9 +343,9 @@ const OrdersPage = () => {
 
   const viewOrderDetails = async (orderId: string) => {
     try {
-      const orderRef = doc(db, 'orders', orderId);
+      const orderRef = doc(db, "orders", orderId);
       const orderDoc = await getDoc(orderRef);
-      
+
       if (orderDoc.exists()) {
         const orderData = orderDoc.data();
         // Pre-process the data to ensure all necessary fields are available
@@ -306,12 +356,12 @@ const OrdersPage = () => {
           items: orderData.items || {},
           statusHistory: orderData.statusHistory || [],
           shippingInfo: orderData.shippingInfo || {},
-          paymentInfo: orderData.paymentInfo || {}
+          paymentInfo: orderData.paymentInfo || {},
         } as Order;
         setSelectedOrder(processedOrder);
       }
     } catch (error) {
-      console.error('Error fetching order details:', error);
+      console.error("Error fetching order details:", error);
     }
   };
 
@@ -343,7 +393,10 @@ const OrdersPage = () => {
               <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/2 mb-8"></div>
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                  <div
+                    key={i}
+                    className="h-20 bg-gray-200 dark:bg-gray-800 rounded"
+                  ></div>
                 ))}
               </div>
             </div>
@@ -357,65 +410,67 @@ const OrdersPage = () => {
     <div className="min-h-screen bg-white">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <TopBar setIsOpen={setIsSidebarOpen} />
-      
+
       <main className="pt-16 pl-0 lg:pl-64 transition-all duration-300 ease-in-out">
         <div className="p-4 md:p-6">
           {/* Header */}
           <div className="mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-indigo-900">Orders</h2>
-              <p className="text-sm md:text-base text-gray-600">
+            <h2 className="text-xl md:text-2xl font-bold text-indigo-900">
+              Orders
+            </h2>
+            <p className="text-sm md:text-base text-gray-600">
               Manage your orders
             </p>
           </div>
-          
+
           {/* Tabs */}
           <div className="mb-6">
             <div className="border-b border-indigo-100">
               <nav className="-mb-px flex space-x-8">
                 <button
-                  onClick={() => setActiveTab('all')}
+                  onClick={() => setActiveTab("all")}
                   className={`${
-                    activeTab === 'all'
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    activeTab === "all"
+                      ? "border-indigo-600 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   All Orders
                 </button>
                 <button
-                  onClick={() => setActiveTab('pending')}
+                  onClick={() => setActiveTab("pending")}
                   className={`${
-                    activeTab === 'pending'
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    activeTab === "pending"
+                      ? "border-indigo-600 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Pending
                 </button>
                 <button
-                  onClick={() => setActiveTab('approved')}
+                  onClick={() => setActiveTab("approved")}
                   className={`${
-                    activeTab === 'approved'
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    activeTab === "approved"
+                      ? "border-indigo-600 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Approved
                 </button>
                 <button
-                  onClick={() => setActiveTab('rejected')}
+                  onClick={() => setActiveTab("rejected")}
                   className={`${
-                    activeTab === 'rejected'
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    activeTab === "rejected"
+                      ? "border-indigo-600 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 >
                   Rejected
                 </button>
-            </nav>
+              </nav>
             </div>
           </div>
-          
+
           {/* Search */}
           <div className="mb-6">
             <div className="relative">
@@ -431,35 +486,59 @@ const OrdersPage = () => {
               />
             </div>
           </div>
-          
+
           {/* Orders Table */}
           <div className="bg-white rounded-lg shadow border border-indigo-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-indigo-100">
                 <thead className="bg-indigo-50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Order
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Product
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Customer
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Date
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Status
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Items
                     </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-right text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Total
                     </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-indigo-900 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-right text-xs font-medium text-indigo-900 uppercase tracking-wider"
+                    >
                       Actions
                     </th>
                   </tr>
@@ -467,7 +546,10 @@ const OrdersPage = () => {
                 <tbody className="bg-white divide-y divide-indigo-100">
                   {currentOrders.length > 0 ? (
                     currentOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-indigo-50 transition-colors duration-150">
+                      <tr
+                        key={order.id}
+                        className="hover:bg-indigo-50 transition-colors duration-150"
+                      >
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-indigo-600">
                             #{order.orderNumber}
@@ -475,11 +557,16 @@ const OrdersPage = () => {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {order.sellerItems[user?.uid || '']?.map((item: OrderItem, index) => (
-                              <div key={item.id || index} className="flex items-center">
-                                <span>{item.name}</span>
-                              </div>
-                            ))}
+                            {order.sellerItems?.[user?.uid || ""]?.map(
+                              (item: OrderItem, index) => (
+                                <div
+                                  key={item.id || index}
+                                  className="flex items-center"
+                                >
+                                  <span>{item.name}</span>
+                                </div>
+                              )
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -490,9 +577,24 @@ const OrdersPage = () => {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            {getStatusIcon(order.sellerStatuses[user?.uid || '']?.status || 'pending')}
-                            <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(order.sellerStatuses[user?.uid || '']?.status || 'pending')}`}>
-                              {order.sellerStatuses[user?.uid || '']?.status?.charAt(0).toUpperCase() + order.sellerStatuses[user?.uid || '']?.status?.slice(1) || 'Pending'}
+                            {getStatusIcon(
+                              order.sellerStatuses?.[user?.uid || ""]?.status ||
+                                "pending"
+                            )}
+                            <span
+                              className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(
+                                order.sellerStatuses?.[user?.uid || ""]
+                                  ?.status || "pending"
+                              )}`}
+                            >
+                              {order.sellerStatuses?.[user?.uid || ""]?.status
+                                ? order.sellerStatuses[user?.uid || ""].status
+                                    .charAt(0)
+                                    .toUpperCase() +
+                                  order.sellerStatuses[
+                                    user?.uid || ""
+                                  ].status.slice(1)
+                                : "Pending"}
                             </span>
                           </div>
                         </td>
@@ -503,7 +605,7 @@ const OrdersPage = () => {
                           ₦{order.total.toFixed(2)}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
+                          <button
                             onClick={() => viewOrderDetails(order.id)}
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
@@ -514,7 +616,10 @@ const OrdersPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td
+                        colSpan={8}
+                        className="px-6 py-4 text-center text-sm text-gray-500"
+                      >
                         No orders found.
                       </td>
                     </tr>
@@ -522,27 +627,37 @@ const OrdersPage = () => {
                 </tbody>
               </table>
             </div>
-            
+
             {/* Pagination */}
             {filteredOrders.length > 0 && (
               <div className="px-4 py-4 border-t border-indigo-100 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{indexOfFirstOrder + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(indexOfLastOrder, filteredOrders.length)}</span> of{' '}
-                    <span className="font-medium">{filteredOrders.length}</span> results
+                    Showing{" "}
+                    <span className="font-medium">{indexOfFirstOrder + 1}</span>{" "}
+                    to{" "}
+                    <span className="font-medium">
+                      {Math.min(indexOfLastOrder, filteredOrders.length)}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium">{filteredOrders.length}</span>{" "}
+                    results
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
                     disabled={currentPage === 1}
                     className="px-3 py-1 border border-indigo-100 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 disabled:opacity-50"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
                     disabled={currentPage === totalPages}
                     className="px-3 py-1 border border-indigo-100 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 disabled:opacity-50"
                   >
@@ -559,19 +674,25 @@ const OrdersPage = () => {
               <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-6">
-                  <div>
+                    <div>
                       <h3 className="text-xl font-semibold text-indigo-900">
                         Order #{selectedOrder.orderNumber}
                       </h3>
                       <p className="text-sm text-gray-500 mt-1">
                         {selectedOrder.createdAt.toDate().toLocaleString()}
-                    </p>
-                  </div>
+                      </p>
+                    </div>
                     <div className="flex items-center space-x-4">
-                      {selectedOrder.sellerStatuses[user?.uid || '']?.status === 'pending' && (
+                      {selectedOrder.sellerStatuses?.[user?.uid || ""]
+                        ?.status === "pending" && (
                         <>
-                      <button
-                            onClick={() => handleOrderStatusUpdate(selectedOrder.id, 'approved')}
+                          <button
+                            onClick={() =>
+                              handleOrderStatusUpdate(
+                                selectedOrder.id,
+                                "approved"
+                              )
+                            }
                             disabled={processingOrder === selectedOrder.id}
                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -586,9 +707,14 @@ const OrdersPage = () => {
                                 Accept Order
                               </>
                             )}
-                      </button>
+                          </button>
                           <button
-                            onClick={() => handleOrderStatusUpdate(selectedOrder.id, 'rejected')}
+                            onClick={() =>
+                              handleOrderStatusUpdate(
+                                selectedOrder.id,
+                                "rejected"
+                              )
+                            }
                             disabled={processingOrder === selectedOrder.id}
                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -618,89 +744,128 @@ const OrdersPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Order Information */}
                     <div>
-                      <h4 className="font-medium text-indigo-900 mb-4">Order Information</h4>
+                      <h4 className="font-medium text-indigo-900 mb-4">
+                        Order Information
+                      </h4>
                       <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Date:</span> {selectedOrder.createdAt.toDate().toLocaleString()}
+                          <span className="font-medium">Date:</span>{" "}
+                          {selectedOrder.createdAt.toDate().toLocaleString()}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Status:</span>{' '}
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusClass(selectedOrder.sellerStatuses[user?.uid || '']?.status || 'pending')}`}>
-                            {selectedOrder.sellerStatuses[user?.uid || '']?.status?.charAt(0).toUpperCase() + 
-                             selectedOrder.sellerStatuses[user?.uid || '']?.status?.slice(1) || 'Pending'}
+                          <span className="font-medium">Status:</span>{" "}
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${getStatusClass(
+                              selectedOrder.sellerStatuses?.[user?.uid || ""]
+                                ?.status || "pending"
+                            )}`}
+                          >
+                            {selectedOrder.sellerStatuses?.[user?.uid || ""]
+                              ?.status
+                              ? selectedOrder.sellerStatuses[
+                                  user?.uid || ""
+                                ].status
+                                  .charAt(0)
+                                  .toUpperCase() +
+                                selectedOrder.sellerStatuses[
+                                  user?.uid || ""
+                                ].status.slice(1)
+                              : "Pending"}
                           </span>
                         </p>
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Total:</span> ₦{selectedOrder.total.toFixed(2)}
+                          <span className="font-medium">Total:</span> ₦
+                          {selectedOrder.total.toFixed(2)}
                         </p>
                       </div>
                     </div>
 
                     {/* Customer Information */}
                     <div>
-                      <h4 className="font-medium text-indigo-900 mb-4">Customer Information</h4>
+                      <h4 className="font-medium text-indigo-900 mb-4">
+                        Customer Information
+                      </h4>
                       <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Name:</span> {selectedOrder.buyerName}
+                          <span className="font-medium">Name:</span>{" "}
+                          {selectedOrder.buyerName}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Email:</span> {selectedOrder.buyerEmail}
+                          <span className="font-medium">Email:</span>{" "}
+                          {selectedOrder.buyerEmail}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Phone:</span> {selectedOrder.shippingInfo.phone}
+                          <span className="font-medium">Phone:</span>{" "}
+                          {selectedOrder.shippingInfo.phone}
                         </p>
                       </div>
                     </div>
 
                     {/* Order Items */}
                     <div className="md:col-span-2">
-                      <h4 className="font-medium text-indigo-900 mb-4">Order Items</h4>
+                      <h4 className="font-medium text-indigo-900 mb-4">
+                        Order Items
+                      </h4>
                       <div className="space-y-4">
-                        {selectedOrder.sellerItems[user?.uid || '']?.map((item: OrderItem) => (
-                          <div key={item.id} className="flex items-center space-x-4 p-4 bg-indigo-50 rounded-lg">
-                            <img
-                              src={item.images?.[0]}
-                              alt={item.name}
-                              className="w-20 h-20 object-cover rounded"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-indigo-900">{item.name}</p>
-                              <div className="mt-1 space-y-1">
-                                <p className="text-sm text-gray-600">
-                                  Quantity: {item.quantity}
+                        {selectedOrder.sellerItems[user?.uid || ""]?.map(
+                          (item: OrderItem) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center space-x-4 p-4 bg-indigo-50 rounded-lg"
+                            >
+                              <img
+                                src={item.images?.[0]}
+                                alt={item.name}
+                                className="w-20 h-20 object-cover rounded"
+                              />
+                              <div className="flex-1">
+                                <p className="font-medium text-indigo-900">
+                                  {item.name}
                                 </p>
-                                <p className="text-sm text-gray-600">
-                                  Price: ₦{item.price.toFixed(2)}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Subtotal: ₦{(item.price * item.quantity).toFixed(2)}
-                                </p>
-                                {item.selectedColor && (
+                                <div className="mt-1 space-y-1">
                                   <p className="text-sm text-gray-600">
-                                    Color: {item.selectedColor}
+                                    Quantity: {item.quantity}
                                   </p>
-                                )}
-                                {item.selectedSize && (
                                   <p className="text-sm text-gray-600">
-                                    Size: {item.selectedSize}
+                                    Price: ₦{item.price.toFixed(2)}
                                   </p>
-                                )}
+                                  <p className="text-sm text-gray-600">
+                                    Subtotal: ₦
+                                    {(item.price * item.quantity).toFixed(2)}
+                                  </p>
+                                  {item.selectedColor && (
+                                    <p className="text-sm text-gray-600">
+                                      Color: {item.selectedColor}
+                                    </p>
+                                  )}
+                                  {item.selectedSize && (
+                                    <p className="text-sm text-gray-600">
+                                      Size: {item.selectedSize}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        )}
                       </div>
                     </div>
 
                     {/* Status History */}
                     <div className="md:col-span-2">
-                      <h4 className="font-medium text-indigo-900 mb-4">Status History</h4>
+                      <h4 className="font-medium text-indigo-900 mb-4">
+                        Status History
+                      </h4>
                       <div className="space-y-2">
                         {selectedOrder.statusHistory.map((status, index) => (
-                          <div key={index} className="flex items-center space-x-4 p-4 bg-indigo-50 rounded-lg">
+                          <div
+                            key={index}
+                            className="flex items-center space-x-4 p-4 bg-indigo-50 rounded-lg"
+                          >
                             <div className="flex-1">
                               <p className="font-medium text-indigo-900">
-                                {status.status.charAt(0).toUpperCase() + status.status.slice(1)}
+                                {status.status.charAt(0).toUpperCase() +
+                                  status.status.slice(1)}
                               </p>
                               <p className="text-sm text-gray-600">
                                 {new Date(status.timestamp).toLocaleString()}
@@ -716,10 +881,10 @@ const OrdersPage = () => {
                       </div>
                     </div>
                   </div>
-                  </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
           {/* Confirmation Modal */}
           {showConfirmModal && pendingAction && (
@@ -727,12 +892,14 @@ const OrdersPage = () => {
               <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                 <div className="text-center">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    {pendingAction.action === 'approved' ? 'Accept Order' : 'Reject Order'}
+                    {pendingAction.action === "approved"
+                      ? "Accept Order"
+                      : "Reject Order"}
                   </h3>
                   <p className="text-sm text-gray-500 mb-6">
-                    {pendingAction.action === 'approved' 
-                      ? 'Are you sure you want to accept this order? This action cannot be undone.'
-                      : 'Are you sure you want to reject this order? This action cannot be undone.'}
+                    {pendingAction.action === "approved"
+                      ? "Are you sure you want to accept this order? This action cannot be undone."
+                      : "Are you sure you want to reject this order? This action cannot be undone."}
                   </p>
                   <div className="flex justify-center space-x-4">
                     <button
@@ -748,9 +915,9 @@ const OrdersPage = () => {
                       onClick={handleConfirmedAction}
                       disabled={processingOrder === pendingAction.orderId}
                       className={`px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                        pendingAction.action === 'approved'
-                          ? 'bg-indigo-600 hover:bg-indigo-700'
-                          : 'bg-red-600 hover:bg-red-700'
+                        pendingAction.action === "approved"
+                          ? "bg-indigo-600 hover:bg-indigo-700"
+                          : "bg-red-600 hover:bg-red-700"
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {processingOrder === pendingAction.orderId ? (
@@ -758,8 +925,10 @@ const OrdersPage = () => {
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           Processing...
                         </div>
+                      ) : pendingAction.action === "approved" ? (
+                        "Accept Order"
                       ) : (
-                        pendingAction.action === 'approved' ? 'Accept Order' : 'Reject Order'
+                        "Reject Order"
                       )}
                     </button>
                   </div>
