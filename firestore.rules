@@ -84,6 +84,11 @@ service cloud.firestore {
                       request.auth.token.isAdmin == true;
         allow delete: if false;
       }
+
+      // Addresses subcollection
+      match /addresses/{addressId} {
+        allow create, read, update, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // Products collection rules (NO ADMIN APPROVAL NEEDED)
@@ -102,6 +107,10 @@ service cloud.firestore {
       // Admin can update any product
       allow update: if request.auth != null &&
                    request.auth.token.isAdmin == true;
+      
+      // Allow any authenticated user to update only the 'stock' field
+      allow update: if request.auth != null &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['stock']);
       
       // Sellers can delete their own products
       allow delete: if request.auth != null &&
@@ -173,6 +182,14 @@ service cloud.firestore {
          resource.data.sellerIds.hasAny([request.auth.uid])) ||
         // Or if user is the buyer
         resource.data.buyerId == request.auth.uid ||
+        // Or if user is an admin
+        isAdmin()
+      );
+      
+      // Allow delete if user is authenticated and is either a seller or admin
+      allow delete: if isAuthenticated() && (
+        // Any seller can delete any order
+        isSeller() ||
         // Or if user is an admin
         isAdmin()
       );
@@ -257,6 +274,40 @@ service cloud.firestore {
       // Allow delete if user is authenticated and is the owner of the account
       allow delete: if isAuthenticated() && 
                    resource.data.sellerId == request.auth.uid;
+    }
+
+    // Reviews collection rules for ratings and comments
+    match /reviews/{reviewId} {
+      // Allow public read access to all reviews
+      allow read: if true;
+      
+      // Allow authenticated users to create reviews
+      allow create: if isAuthenticated() && 
+        // Ensure userId matches the authenticated user
+        request.resource.data.userId == request.auth.uid &&
+        // Ensure required fields are present
+        request.resource.data.keys().hasAll(['productId', 'sellerId', 'rating', 'comment']) &&
+        // Ensure rating is between 1 and 5
+        request.resource.data.rating >= 1 && 
+        request.resource.data.rating <= 5 &&
+        // Ensure comment is not empty
+        request.resource.data.comment.size() > 0;
+      
+      // Allow users to update their own reviews
+      allow update: if isAuthenticated() && 
+                   resource.data.userId == request.auth.uid &&
+                   // Ensure rating is between 1 and 5
+                   request.resource.data.rating >= 1 && 
+                   request.resource.data.rating <= 5 &&
+                   // Ensure comment is not empty
+                   request.resource.data.comment.size() > 0;
+      
+      // Allow users to delete their own reviews
+      allow delete: if isAuthenticated() && 
+                   resource.data.userId == request.auth.uid;
+      
+      // Allow admins to manage all reviews
+      allow write: if isAdmin();
     }
 
     // Default deny all other operations

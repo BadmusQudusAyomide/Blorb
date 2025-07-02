@@ -13,6 +13,7 @@ import {
   Timestamp,
   arrayUnion,
   getDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import {
   ShoppingCart,
@@ -21,6 +22,8 @@ import {
   XCircle,
   Truck,
   Search,
+  AlertCircle,
+  Check,
 } from "lucide-react";
 import TopBar from "../components/dashboard/TopBar";
 import Sidebar from "../components/dashboard/Sidebar";
@@ -118,6 +121,8 @@ const OrdersPage = () => {
     orderId: string;
     action: "approved" | "rejected";
   } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Fetch orders
   useEffect(() => {
@@ -362,6 +367,48 @@ const OrdersPage = () => {
       }
     } catch (error) {
       console.error("Error fetching order details:", error);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!user) return;
+
+    // Show confirmation dialog
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this order? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setProcessingOrder(orderId);
+    setDeleteError(null);
+    setSuccessMessage(null);
+
+    try {
+      const orderRef = doc(db, "orders", orderId);
+      await deleteDoc(orderRef);
+
+      setProcessingOrder(null);
+      setSelectedOrder(null);
+      setSuccessMessage("Order deleted successfully!");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      setProcessingOrder(null);
+      setDeleteError(
+        "Failed to delete order. You may not have permission to delete this order."
+      );
+
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setDeleteError(null);
+      }, 5000);
     }
   };
 
@@ -733,6 +780,23 @@ const OrdersPage = () => {
                         </>
                       )}
                       <button
+                        onClick={() => handleDeleteOrder(selectedOrder.id)}
+                        disabled={processingOrder === selectedOrder.id}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {processingOrder === selectedOrder.id ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Processing...
+                          </div>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Delete Order
+                          </>
+                        )}
+                      </button>
+                      <button
                         onClick={() => setSelectedOrder(null)}
                         className="inline-flex items-center px-3 py-2 border border-indigo-100 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
@@ -934,6 +998,20 @@ const OrdersPage = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-md flex items-center">
+              <Check className="w-5 h-5 mr-2" />
+              {successMessage}
+            </div>
+          )}
+
+          {deleteError && (
+            <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md flex items-center">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              {deleteError}
             </div>
           )}
         </div>
