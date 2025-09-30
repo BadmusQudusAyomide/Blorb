@@ -1,5 +1,15 @@
 rules_version = '2';
 
+// Helper functions
+function isAuthenticated() {
+  return request.auth != null;
+}
+
+function isAdmin() {
+  return isAuthenticated() && 
+         request.auth.token.isAdmin == true;
+}
+
 service cloud.firestore {
   match /databases/{database}/documents {
     // Allow public read access to carousel images
@@ -176,14 +186,21 @@ service cloud.firestore {
         request.resource.data.buyerId == request.auth.uid;
       
       // Allow update if user is authenticated and is either a seller, buyer, or admin
-      allow update: if isAuthenticated() && (
-        // Check if user is in sellerIds array
+      // Also allow server-side updates (request.auth == null) for payment processing
+      allow update: if (
+        // Server-side updates (service account)
+        request.auth == null ||
+        // Or if user is in sellerIds array
         (resource.data.sellerIds != null && 
          resource.data.sellerIds.hasAny([request.auth.uid])) ||
         // Or if user is the buyer
         resource.data.buyerId == request.auth.uid ||
         // Or if user is an admin
-        isAdmin()
+        isAdmin() ||
+        // Allow sellers to update their status fields
+        (isAuthenticated() && 
+         resource.data.sellerIds.hasAny([request.auth.uid]) &&
+         request.resource.data.diff(resource.data).changedKeys().hasOnly(['sellerStatuses']))
       );
       
       // Allow delete if user is authenticated and is either a seller or admin
@@ -230,6 +247,33 @@ service cloud.firestore {
         // Or if user is an admin
         isAdmin()
       );
+    }
+
+    // Seller financial records
+    match /sellerFinancials/{sellerId} {
+      // Allow read by the seller or admin
+      allow read: if isAuthenticated() && (
+        request.auth.uid == sellerId || 
+        isAdmin()
+      );
+      
+      // Allow server to create/update records during payment processing
+      allow create, update: if (
+        // Allow server (using service account)
+        request.auth == null || 
+        // Or allow admin
+        isAdmin() ||
+        // Or allow the seller to update their own record (for withdrawals)
+        (request.auth.uid == sellerId && 
+         request.resource.data.keys().hasOnly(['availableBalance', 'totalWithdrawn', 'pendingWithdrawal', 'lastUpdated'])) ||
+        // Or allow payment processing updates (from walletService)
+        (request.auth.uid == sellerId &&
+         request.resource.data.keys().hasAll(['totalRevenue', 'actualAmountReceived', 'availableBalance', 'lastUpdated']) &&
+         request.resource.data.keys().hasOnly(['totalRevenue', 'actualAmountReceived', 'availableBalance', 'lastUpdated']))
+      );
+      
+      // Only allow deletion by admin
+      allow delete: if isAdmin();
     }
 
     // Payouts collection rules
@@ -308,6 +352,91 @@ service cloud.firestore {
       
       // Allow admins to manage all reviews
       allow write: if isAdmin();
+    }
+
+    // Wallet Credits collection rules
+    match /walletCredits/{creditId} {
+      // Allow read by the seller or admin
+      allow read: if isAuthenticated() && (
+        resource.data.sellerId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Allow creation by server during payment processing
+      allow create: if (
+        // Allow server (using service account)
+        request.auth == null ||
+        // Or allow admin
+        isAdmin() ||
+        // Or allow creation with proper data structure
+        (
+          isAuthenticated() &&
+          request.resource.data.sellerId == request.auth.uid &&
+          request.resource.data.keys().hasAll(['orderId', 'amount', 'source', 'status']) &&
+          request.resource.data.status in ['pending', 'completed']
+        )
+      );
+      
+      // Only allow updates to status field by server or admin
+      allow update: if (
+        // Allow server (using service account)
+        request.auth == null ||
+        // Or allow admin
+        isAdmin() ||
+        // Or allow seller to update specific fields
+        (
+          isAuthenticated() &&
+          resource.data.sellerId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedAt']) &&
+          request.resource.data.status in ['completed', 'failed']
+        )
+      );
+      
+      // Only allow deletion by admin
+      allow delete: if isAdmin();
+    }
+
+    // Transactions collection rules
+    match /transactions/{transactionId} {
+      // Allow read by the seller or admin
+      allow read: if isAuthenticated() && (
+        resource.data.sellerId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Allow creation by server during payment processing
+      allow create: if (
+        // Allow server (using service account)
+        request.auth == null ||
+        // Or allow admin
+        isAdmin() ||
+        // Or allow creation with proper data structure
+        (
+          isAuthenticated() &&
+          request.resource.data.sellerId == request.auth.uid &&
+          request.resource.data.keys().hasAll(['type', 'amount', 'status', 'description']) &&
+          request.resource.data.status in ['pending', 'completed', 'failed'] &&
+          request.resource.data.type in ['wallet_credit', 'withdrawal', 'refund']
+        )
+      );
+      
+      // Only allow status updates by server or admin
+      allow update: if (
+        // Allow server (using service account)
+        request.auth == null ||
+        // Or allow admin
+        isAdmin() ||
+        // Or allow seller to update specific fields
+        (
+          isAuthenticated() &&
+          resource.data.sellerId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'metadata']) &&
+          request.resource.data.status in ['completed', 'failed']
+        )
+      );
+      
+      // Only allow deletion by admin
+      allow delete: if isAdmin();
     }
 
     // Default deny all other operations

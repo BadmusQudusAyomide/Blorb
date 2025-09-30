@@ -1,0 +1,30 @@
+{
+  "name": "blorb-paystack-scripts",
+  "version": "1.0.0",
+  "description": "Bulk Paystack subaccount creation scripts for Blorb marketplace",
+  "main": "paystackSubaccounts.js",
+  "scripts": {
+    "create-subaccounts": "node paystackSubaccountsSimple.js",
+    "create-subaccounts-web": "node paystackSubaccountsWeb.js",
+    "create-subaccounts-admin": "node paystackSubaccounts.js",
+    "test-bank-codes": "node testBankCodes.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase": "^10.7.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "paystack",
+    "subaccounts",
+    "marketplace",
+    "firebase",
+    "bulk-creation"
+  ],
+  "author": "Blorb Marketplace",
+  "license": "MIT"
+}

@@ -23,6 +23,7 @@ import {
   X,
   Check,
   AlertCircle,
+  Info,
 } from "lucide-react";
 import Sidebar from "../components/dashboard/Sidebar";
 import TopBar from "../components/dashboard/TopBar";
@@ -38,16 +39,32 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { 
+  getSellerFinancialStatus, 
+  getSellerWalletCredits,
+  updateBalanceAfterWithdrawal 
+} from "../services/walletService";
+import type { 
+  SellerFinancialRecord, 
+  WalletCredit 
+} from "../types/payment";
+import { PLATFORM_FEE_PERCENTAGE, SELLER_PERCENTAGE } from "../utils/paymentCalculations";
 
 interface Transaction {
   id: string;
   date: Timestamp;
-  type: "sale" | "refund" | "payout" | "withdrawal";
+  type: "sale" | "refund" | "payout" | "withdrawal" | "wallet_credit";
   amount: number;
   status: "completed" | "pending" | "failed";
   orderId?: string;
   payoutId?: string;
+  walletCreditId?: string;
   description: string;
+  metadata?: {
+    platformFee?: number;
+    originalAmount?: number;
+    paymentSplitId?: string;
+  };
 }
 
 interface Payout {
@@ -103,6 +120,11 @@ const FinancesPage = () => {
   const [selectedBankAccount, setSelectedBankAccount] =
     useState<BankAccount | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
+  // New state for real payment tracking
+  const [sellerFinancialRecord, setSellerFinancialRecord] = useState<SellerFinancialRecord | null>(null);
+  const [walletCredits, setWalletCredits] = useState<WalletCredit[]>([]);
+  const [actualAmountReceived, setActualAmountReceived] = useState(0);
+  const [realAvailableBalance, setRealAvailableBalance] = useState(0);
 
   // Fetch all necessary data
   const fetchData = useCallback(async () => {
@@ -110,6 +132,19 @@ const FinancesPage = () => {
 
     try {
       setLoading(true);
+
+      // Fetch seller financial record (real payment data)
+      const financialRecord = await getSellerFinancialStatus(user.uid);
+      setSellerFinancialRecord(financialRecord);
+      
+      if (financialRecord) {
+        setActualAmountReceived(financialRecord.actualAmountReceived || 0);
+        setRealAvailableBalance(financialRecord.availableBalance || 0);
+      }
+
+      // Fetch wallet credits
+      const walletCreditsData = await getSellerWalletCredits(user.uid);
+      setWalletCredits(walletCreditsData);
 
       // Fetch transactions
       const transactionsRef = collection(db, "transactions");
@@ -149,7 +184,7 @@ const FinancesPage = () => {
         }
       }
 
-      // Fetch orders for revenue calculation
+      // Fetch orders for legacy revenue calculation (keep for backward compatibility)
       const ordersRef = collection(db, "orders");
       const ordersQuery = query(
         ordersRef,
@@ -168,13 +203,16 @@ const FinancesPage = () => {
         } as Order;
       });
       setOrders(ordersData);
-      const revenue = ordersData
-        .filter(
-          (order) =>
-            order.sellerStatuses &&
-            order.sellerStatuses[user?.uid || ""]?.status === "approved"
-        )
-        .reduce((sum, order) => sum + (order.total || 0), 0);
+      
+      // Use real payment amounts if available, fallback to legacy calculation
+      const revenue = financialRecord?.actualAmountReceived || 
+        ordersData
+          .filter(
+            (order) =>
+              order.sellerStatuses &&
+              order.sellerStatuses[user?.uid || ""]?.status === "approved"
+          )
+          .reduce((sum, order) => sum + (order.total || 0), 0);
       setTotalRevenue(revenue);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -229,8 +267,8 @@ const FinancesPage = () => {
     };
   }, [user?.uid]);
 
-  // Calculate available balance - UPDATED to include pending withdrawals
-  const availableBalance =
+  // Calculate available balance - Use real payment amounts
+  const availableBalance = realAvailableBalance > 0 ? realAvailableBalance :
     totalRevenue -
     transactions
       .filter(
@@ -349,30 +387,23 @@ const FinancesPage = () => {
       setLoading(true);
       setError(null);
 
-      // Create payout record
-      const payoutData = {
-        sellerId: user.uid,
-        amount,
-        status: "requested",
-        bankDetails: selectedBankAccount,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-      };
+      const token = await user.getIdToken();
 
-      const payoutRef = await addDoc(collection(db, "payouts"), payoutData);
+      const response = await fetch('http://localhost:3000/payout/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount })
+      });
 
-      // Create transaction record
-      const transactionData = {
-        sellerId: user.uid,
-        date: Timestamp.now(),
-        type: "withdrawal",
-        amount: -amount,
-        status: "pending",
-        description: `Payout request #${payoutRef.id}`,
-        payoutId: payoutRef.id,
-      };
+      if (!response.ok) {
+        throw new Error('Payout request failed');
+      }
 
-      await addDoc(collection(db, "transactions"), transactionData);
+      // Refresh financial data
+      await fetchData();
 
       setPayoutAmount("");
       setPayoutSuccess(true);
@@ -479,12 +510,13 @@ const FinancesPage = () => {
             <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Revenue</p>
+                  <p className="text-sm text-gray-600">Real Money Received</p>
                   <p className="text-2xl font-bold text-gray-800">
-                    {formatCurrency(totalRevenue)}
+                    {formatCurrency(actualAmountReceived)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    All-time earnings
+                  <p className="text-xs text-gray-500 mt-1 flex items-center">
+                    <Info className="w-3 h-3 mr-1" />
+                    85% of order payments
                   </p>
                 </div>
                 <div className="p-3 bg-green-50 rounded-full">
@@ -503,6 +535,12 @@ const FinancesPage = () => {
                   <p className="text-xs text-gray-500 mt-1">
                     Ready for withdrawal
                   </p>
+                  {realAvailableBalance > 0 && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center">
+                      <Check className="w-3 h-3 mr-1" />
+                      Real-time balance
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-blue-50 rounded-full">
                   <Wallet className="w-6 h-6 text-blue-600" />

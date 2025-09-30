@@ -24,9 +24,14 @@ import {
   Search,
   AlertCircle,
   Check,
+  DollarSign,
+  Info,
 } from "lucide-react";
 import TopBar from "../components/dashboard/TopBar";
 import Sidebar from "../components/dashboard/Sidebar";
+import { formatCurrency } from "../utils/formatters";
+import { getSellerSplit, formatPaymentBreakdown } from "../utils/paymentCalculations";
+import type { EnhancedOrder, PaymentSplit } from "../types/payment";
 
 interface OrderItem {
   id: string;
@@ -58,7 +63,8 @@ interface Order {
     | "processing"
     | "shipped"
     | "delivered"
-    | "cancelled";
+    | "cancelled"
+    | "paid";
   items: { [key: string]: OrderItem };
   sellerItems: {
     [sellerId: string]: OrderItem[];
@@ -98,6 +104,11 @@ interface Order {
     updatedBy: string;
     notes: string;
   }[];
+  // Enhanced payment fields
+  paymentSplits?: PaymentSplit[];
+  actualPaymentReceived?: number;
+  paymentProcessedAt?: Timestamp;
+  walletCreditsProcessed?: boolean;
 }
 
 const OrdersPage = () => {
@@ -123,6 +134,8 @@ const OrdersPage = () => {
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showPaymentSplitModal, setShowPaymentSplitModal] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
 
   // Fetch orders
   useEffect(() => {
@@ -240,55 +253,77 @@ const OrdersPage = () => {
 
       if (!order) return;
 
-      // Defensive: Check for sellerStatuses and sellerItems for this user
+      // Defensive: Initialize missing seller structures so update can proceed
       if (!order.sellerStatuses || !order.sellerStatuses[user.uid]) {
-        alert(
-          "Order data is missing seller status for this seller. Please contact support."
-        );
-        setProcessingOrder(null);
-        setShowConfirmModal(false);
-        setPendingAction(null);
-        return;
+        order.sellerStatuses = order.sellerStatuses || ({} as any);
+        (order.sellerStatuses as any)[user.uid] = {
+          status: "pending",
+          approvedAt: null,
+          shippedAt: null,
+          deliveredAt: null,
+          notes: "",
+          trackingNumber: "",
+        } as any;
       }
       if (!order.sellerItems || !order.sellerItems[user.uid]) {
-        alert(
-          "Order data is missing seller items for this seller. Please contact support."
-        );
-        setProcessingOrder(null);
-        setShowConfirmModal(false);
-        setPendingAction(null);
-        return;
+        const fallback = Object.values(order.items || {}).filter(
+          (it: any) => it.sellerId === user.uid
+        ) as any[];
+        order.sellerItems = order.sellerItems || ({} as any);
+        (order.sellerItems as any)[user.uid] = fallback;
       }
 
       const status = pendingAction.action;
       const timestamp = new Date().toISOString();
-
-      await updateDoc(orderRef, {
+      const updates: any = {
         [`sellerStatuses.${user.uid}.status`]: status,
-        [`sellerStatuses.${user.uid}.approvedAt`]:
-          status === "approved" ? Timestamp.now() : null,
-        [`sellerStatuses.${user.uid}.notes`]:
-          status === "approved"
-            ? "Order approved by seller"
-            : "Order rejected by seller",
+        [`sellerStatuses.${user.uid}.approvedAt`]: status === "approved" ? Timestamp.now() : null,
+        [`sellerStatuses.${user.uid}.notes`]: status === "approved"
+          ? "Order approved by seller"
+          : "Order rejected by seller",
         updatedAt: Timestamp.now(),
         statusHistory: arrayUnion({
           status: status,
           timestamp: timestamp,
           updatedBy: user.uid,
-          notes:
-            status === "approved"
-              ? "Order approved by seller"
-              : "Order rejected by seller",
+          notes: status === "approved"
+            ? "Order approved by seller"
+            : "Order rejected by seller",
         }),
-      });
+      };
 
+      // Update the order status first
+      await updateDoc(orderRef, updates);
+      
       // Update individual items status
       const sellerItems = order.sellerItems[user.uid] || [];
       for (const item of sellerItems) {
         await updateDoc(orderRef, {
           [`items.${item.id}.sellerStatus`]: status,
         });
+      }
+
+      if (status === 'approved') {
+        // Create a temporary updated sellerStatuses
+        const updatedSellerStatuses = {
+          ...order.sellerStatuses,
+          [user.uid]: {
+            ...order.sellerStatuses[user.uid],
+            status: 'approved',
+            approvedAt: Timestamp.now()
+          }
+        };
+
+        // If this is the last seller to approve, mark the order as processing
+        const allSellersApproved = Object.entries(updatedSellerStatuses)
+          .every(([sellerId, sellerStatus]) => sellerStatus.status === 'approved');
+        
+        if (allSellersApproved) {
+          await updateDoc(orderRef, {
+            status: 'processing',
+            updatedAt: Timestamp.now()
+          });
+        }
       }
 
       setProcessingOrder(null);
@@ -319,6 +354,8 @@ const OrdersPage = () => {
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
       case "cancelled":
         return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+      case "paid":
+        return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
     }
@@ -341,9 +378,20 @@ const OrdersPage = () => {
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case "cancelled":
         return <XCircle className="w-4 h-4 text-red-500" />;
+      case "paid":
+        return <DollarSign className="w-4 h-4 text-emerald-500" />;
       default:
         return <ShoppingCart className="w-4 h-4 text-gray-500" />;
     }
+  };
+
+  // Handle simulating order payment (for testing)
+
+
+  // Show payment split details
+  const showPaymentSplitDetails = (order: Order) => {
+    setSelectedOrderForPayment(order);
+    setShowPaymentSplitModal(true);
   };
 
   const viewOrderDetails = async (orderId: string) => {
@@ -604,16 +652,16 @@ const OrdersPage = () => {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {order.sellerItems?.[user?.uid || ""]?.map(
-                              (item: OrderItem, index) => (
-                                <div
-                                  key={item.id || index}
-                                  className="flex items-center"
-                                >
-                                  <span>{item.name}</span>
-                                </div>
+                            {(
+                              order.sellerItems?.[user?.uid || ""] ||
+                              Object.values(order.items || {}).filter(
+                                (it: any) => it.sellerId === (user?.uid || "")
                               )
-                            )}
+                            ).map((item: any, index: number) => (
+                              <div key={item.id || index} className="flex items-center">
+                                <span>{item.name}</span>
+                              </div>
+                            ))}
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -649,15 +697,34 @@ const OrdersPage = () => {
                           {Object.keys(order.items).length}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                          ₦{order.total.toFixed(2)}
+                          <div className="flex flex-col items-end">
+                            <span>₦{order.total.toFixed(2)}</span>
+                            {order.paymentSplits && (
+                              <span className="text-xs text-green-600">
+                                +₦{getSellerSplit(order.paymentSplits, user?.uid || "")?.sellerAmount.toFixed(2) || "0.00"} credited
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => viewOrderDetails(order.id)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                          >
-                            View Details
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => viewOrderDetails(order.id)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                              View Details
+                            </button>
+
+                            {order.paymentSplits && (
+                              <button
+                                onClick={() => showPaymentSplitDetails(order)}
+                                className="inline-flex items-center px-2 py-1.5 border border-blue-600 text-sm font-medium rounded-md text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                title="View payment split"
+                              >
+                                <Info className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -730,8 +797,7 @@ const OrdersPage = () => {
                       </p>
                     </div>
                     <div className="flex items-center space-x-4">
-                      {selectedOrder.sellerStatuses?.[user?.uid || ""]
-                        ?.status === "pending" && (
+                      {(selectedOrder.sellerStatuses?.[user?.uid || ""]?.status || "pending") === "pending" && (
                         <>
                           <button
                             onClick={() =>
@@ -1012,6 +1078,172 @@ const OrdersPage = () => {
             <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md flex items-center">
               <AlertCircle className="w-5 h-5 mr-2" />
               {deleteError}
+            </div>
+          )}
+
+          {/* Payment Split Modal */}
+          {showPaymentSplitModal && selectedOrderForPayment && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-indigo-900">
+                        Payment Split Details
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Order #{selectedOrderForPayment.orderNumber}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowPaymentSplitModal(false)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {selectedOrderForPayment.paymentSplits ? (
+                    <div className="space-y-6">
+                      {/* Order Summary */}
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">Order Summary</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Total Order Value:</span>
+                            <span className="ml-2 font-medium">{formatCurrency(selectedOrderForPayment.total)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Payment Status:</span>
+                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                              selectedOrderForPayment.status === 'paid' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {selectedOrderForPayment.status === 'paid' ? 'Paid' : 'Pending Payment'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Platform Fee (15%):</span>
+                            <span className="ml-2 font-medium text-red-600">
+                              -{formatCurrency(selectedOrderForPayment.total * 0.15)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Seller Share (85%):</span>
+                            <span className="ml-2 font-medium text-green-600">
+                              +{formatCurrency(selectedOrderForPayment.total * 0.85)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Your Split */}
+                      {(() => {
+                        const yourSplit = getSellerSplit(selectedOrderForPayment.paymentSplits, user?.uid || "");
+                        if (yourSplit) {
+                          return (
+                            <div className="bg-blue-50 rounded-lg p-4">
+                              <h4 className="font-medium text-blue-900 mb-3 flex items-center">
+                                <DollarSign className="w-5 h-5 mr-2" />
+                                Your Payment Split
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-600">Order Amount</div>
+                                  <div className="text-lg font-bold text-gray-900">
+                                    {formatCurrency(yourSplit.orderAmount)}
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-600">Platform Fee</div>
+                                  <div className="text-lg font-bold text-red-600">
+                                    -{formatCurrency(yourSplit.platformFee)}
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-600">Amount Credited</div>
+                                  <div className="text-lg font-bold text-green-600">
+                                    +{formatCurrency(yourSplit.sellerAmount)}
+                                  </div>
+                                </div>
+                              </div>
+                              {selectedOrderForPayment.status === 'paid' && (
+                                <div className="mt-3 p-3 bg-green-100 rounded-md">
+                                  <div className="flex items-center text-green-800">
+                                    <Check className="w-4 h-4 mr-2" />
+                                    <span className="text-sm font-medium">
+                                      {formatCurrency(yourSplit.sellerAmount)} has been credited to your wallet
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-green-600 mt-1">
+                                    Processed: {yourSplit.processedAt.toDate().toLocaleString()}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* All Sellers Split */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">All Sellers Split</h4>
+                        <div className="space-y-3">
+                          {selectedOrderForPayment.paymentSplits.map((split, index) => (
+                            <div key={index} className={`p-3 rounded-lg border ${
+                              split.sellerId === user?.uid 
+                                ? 'border-blue-200 bg-blue-50' 
+                                : 'border-gray-200 bg-gray-50'
+                            }`}>
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {split.sellerName}
+                                    {split.sellerId === user?.uid && (
+                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                        You
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Order: {formatCurrency(split.orderAmount)} | 
+                                    Fee: {formatCurrency(split.platformFee)} | 
+                                    Credit: {formatCurrency(split.sellerAmount)}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-green-600">
+                                    +{formatCurrency(split.sellerAmount)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Info className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No payment split information available for this order.</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Payment splits are generated when the order is paid.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={() => setShowPaymentSplitModal(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
