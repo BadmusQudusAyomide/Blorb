@@ -16,6 +16,8 @@ import ShippingPage from './pages/ShippingPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import CarouselPage from './pages/CarouselPage';
+import EscrowSellerDashboard from './components/EscrowSellerDashboard';
+import EscrowPaymentHistory from './components/EscrowPaymentHistory';
 import { WifiOff, X } from 'lucide-react';
 import AddCategory from './AddCategory';
 
@@ -119,6 +121,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return <>{children}</>;
+};
+
+// Wrapper for escrow components that need sellerId
+const EscrowDashboardWrapper = () => {
+  const { user } = useAuth();
+  return <EscrowSellerDashboard sellerId={user?.uid || ''} />;
+};
+
+const EscrowPaymentWrapper = () => {
+  const { user } = useAuth();
+  return <EscrowPaymentHistory sellerId={user?.uid || ''} />;
 };
 
 function App() {
@@ -260,6 +273,19 @@ function App() {
               <Route path="/help" element={
                 <ProtectedRoute>
                   <HelpCenterPage />
+                </ProtectedRoute>
+              } />
+              
+              {/* Escrow Routes */}
+              <Route path="/escrow-dashboard" element={
+                <ProtectedRoute>
+                  <EscrowDashboardWrapper />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/payment-history" element={
+                <ProtectedRoute>
+                  <EscrowPaymentWrapper />
                 </ProtectedRoute>
               } />
               

@@ -1,17 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import TopBar from "../components/dashboard/TopBar";
 import { uploadImage } from "../utils/cloudinary";
-import { X } from "lucide-react";
+import { 
+  verifyBankAccount, 
+  fetchNigerianBanks, 
+  validateAccountNumber,
+  formatAccountNumber 
+} from "../utils/paystackVerification";
+import { X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { ImageIcon } from "lucide-react";
 
 interface BankAccount {
   id: string;
   bankName: string;
+  bankCode: string;
   accountNumber: string;
   accountName: string;
   isDefault: boolean;
+  isVerified: boolean;
+  verificationStatus: 'pending' | 'verifying' | 'verified' | 'failed';
+  verificationMessage?: string;
 }
 
 interface FormData {
@@ -51,9 +61,12 @@ const SettingsPage = () => {
           {
             id: "1",
             bankName: seller.bankDetails.bankName,
+            bankCode: seller.bankDetails.bankCode || "",
             accountNumber: seller.bankDetails.accountNumber,
             accountName: seller.bankDetails.accountName,
             isDefault: true,
+            isVerified: seller.bankDetails.isVerified || false,
+            verificationStatus: seller.bankDetails.isVerified ? 'verified' : 'pending',
           },
         ]
       : []
@@ -78,6 +91,26 @@ const SettingsPage = () => {
     storeDescription: "",
   });
   const [loading, setLoading] = useState(false);
+  const [banks, setBanks] = useState<any[]>([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+
+  // Fetch Nigerian banks on component mount
+  useEffect(() => {
+    const loadBanks = async () => {
+      setLoadingBanks(true);
+      try {
+        const bankList = await fetchNigerianBanks();
+        setBanks(bankList);
+      } catch (error) {
+        console.error('Failed to load banks:', error);
+        setError('Failed to load bank list. Some features may not work properly.');
+      } finally {
+        setLoadingBanks(false);
+      }
+    };
+
+    loadBanks();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -120,9 +153,12 @@ const SettingsPage = () => {
     const newAccount: BankAccount = {
       id: Date.now().toString(),
       bankName: "",
+      bankCode: "",
       accountNumber: "",
       accountName: "",
       isDefault: bankAccounts.length === 0,
+      isVerified: false,
+      verificationStatus: 'pending',
     };
     setBankAccounts([...bankAccounts, newAccount]);
   };
@@ -150,6 +186,79 @@ const SettingsPage = () => {
     );
   };
 
+  const verifyAccount = async (accountId: string) => {
+    const account = bankAccounts.find(acc => acc.id === accountId);
+    if (!account || !account.accountNumber || !account.bankCode) {
+      setError('Please fill in account number and select a bank before verifying');
+      return;
+    }
+
+    if (!validateAccountNumber(account.accountNumber)) {
+      setError('Please enter a valid 10-digit account number');
+      return;
+    }
+
+    // Update verification status to verifying
+    setBankAccounts(prev =>
+      prev.map(acc =>
+        acc.id === accountId
+          ? { ...acc, verificationStatus: 'verifying' as const }
+          : acc
+      )
+    );
+
+    try {
+      const result = await verifyBankAccount(account.accountNumber, account.bankCode);
+      
+      if (result.status && result.data) {
+        // Update account with verified information
+        setBankAccounts(prev =>
+          prev.map(acc =>
+            acc.id === accountId
+              ? {
+                  ...acc,
+                  accountName: result.data!.account_name,
+                  isVerified: true,
+                  verificationStatus: 'verified' as const,
+                  verificationMessage: result.message,
+                }
+              : acc
+          )
+        );
+        setSuccess('Account verified successfully!');
+      } else {
+        // Verification failed
+        setBankAccounts(prev =>
+          prev.map(acc =>
+            acc.id === accountId
+              ? {
+                  ...acc,
+                  isVerified: false,
+                  verificationStatus: 'failed' as const,
+                  verificationMessage: result.message,
+                }
+              : acc
+          )
+        );
+        setError(result.message || 'Account verification failed');
+      }
+    } catch (error) {
+      setBankAccounts(prev =>
+        prev.map(acc =>
+          acc.id === accountId
+            ? {
+                ...acc,
+                isVerified: false,
+                verificationStatus: 'failed' as const,
+                verificationMessage: 'Verification failed due to network error',
+              }
+            : acc
+        )
+      );
+      setError('Failed to verify account. Please check your internet connection and try again.');
+    }
+  };
+
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "logo" | "banner"
@@ -175,9 +284,20 @@ const SettingsPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous messages
+    setError(null);
+    setSuccess(null);
+    
     try {
       // Get the default bank account
       const defaultAccount = bankAccounts.find((account) => account.isDefault);
+
+      // Validate that default account is verified if banking tab is active
+      if (activeTab === "banking" && defaultAccount && !defaultAccount.isVerified) {
+        setError("Please verify your default bank account before saving.");
+        return;
+      }
 
       // Prepare the data to be saved
       const dataToSave = {
@@ -185,8 +305,10 @@ const SettingsPage = () => {
         bankDetails: defaultAccount
           ? {
               bankName: defaultAccount.bankName,
+              bankCode: defaultAccount.bankCode,
               accountNumber: defaultAccount.accountNumber,
               accountName: defaultAccount.accountName,
+              isVerified: defaultAccount.isVerified,
             }
           : undefined,
       };
@@ -499,6 +621,24 @@ const SettingsPage = () => {
 
               {activeTab === "banking" && (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <AlertCircle className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-blue-800">
+                          Account Verification Required
+                        </h3>
+                        <div className="mt-2 text-sm text-blue-700">
+                          <p>
+                            All bank accounts must be verified using Paystack to ensure authenticity 
+                            and prevent fraudulent transactions. This helps protect both you and your customers.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   {bankAccounts.map((account) => (
                     <div
                       key={account.id}
@@ -509,52 +649,133 @@ const SettingsPage = () => {
                           <label className="block text-sm font-medium text-gray-700">
                             Bank Name
                           </label>
-                          <input
-                            type="text"
-                            value={account.bankName}
-                            onChange={(e) =>
-                              handleBankAccountChange(
-                                account.id,
-                                "bankName",
-                                e.target.value
-                              )
-                            }
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          />
+                          {loadingBanks ? (
+                            <div className="mt-1 flex items-center">
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              <span className="text-sm text-gray-500">Loading banks...</span>
+                            </div>
+                          ) : (
+                            <select
+                              value={account.bankCode}
+                              onChange={(e) => {
+                                const selectedBank = banks.find(bank => bank.code === e.target.value);
+                                handleBankAccountChange(account.id, "bankCode", e.target.value);
+                                handleBankAccountChange(account.id, "bankName", selectedBank?.name || "");
+                                // Reset verification status when bank changes
+                                handleBankAccountChange(account.id, "isVerified", false);
+                                handleBankAccountChange(account.id, "verificationStatus", "pending");
+                              }}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            >
+                              <option value="">Select a bank</option>
+                              {banks.map((bank) => (
+                                <option key={bank.id} value={bank.code}>
+                                  {bank.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">
                             Account Number
                           </label>
-                          <input
-                            type="text"
-                            value={account.accountNumber}
-                            onChange={(e) =>
-                              handleBankAccountChange(
-                                account.id,
-                                "accountNumber",
-                                e.target.value
-                              )
-                            }
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          />
+                          <div className="mt-1 flex">
+                            <input
+                              type="text"
+                              value={account.accountNumber}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                                handleBankAccountChange(account.id, "accountNumber", value);
+                                // Reset verification when account number changes
+                                if (account.isVerified) {
+                                  handleBankAccountChange(account.id, "isVerified", false);
+                                  handleBankAccountChange(account.id, "verificationStatus", "pending");
+                                }
+                              }}
+                              placeholder="Enter 10-digit account number"
+                              maxLength={10}
+                              className="flex-1 rounded-l-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => verifyAccount(account.id)}
+                              disabled={
+                                !account.accountNumber || 
+                                !account.bankCode || 
+                                account.verificationStatus === 'verifying' ||
+                                !validateAccountNumber(account.accountNumber)
+                              }
+                              className={`px-4 py-2 rounded-r-md text-sm font-medium border border-l-0 ${
+                                account.verificationStatus === 'verifying'
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : account.isVerified
+                                  ? 'bg-green-100 text-green-700 border-green-300'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600'
+                              }`}
+                            >
+                              {account.verificationStatus === 'verifying' ? (
+                                <div className="flex items-center">
+                                  <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                                  Verifying...
+                                </div>
+                              ) : account.isVerified ? (
+                                <div className="flex items-center">
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Verified
+                                </div>
+                              ) : (
+                                'Verify'
+                              )}
+                            </button>
+                          </div>
+                          {account.accountNumber && !validateAccountNumber(account.accountNumber) && (
+                            <p className="mt-1 text-sm text-red-600">
+                              Account number must be exactly 10 digits
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">
                             Account Name
                           </label>
-                          <input
-                            type="text"
-                            value={account.accountName}
-                            onChange={(e) =>
-                              handleBankAccountChange(
-                                account.id,
-                                "accountName",
-                                e.target.value
-                              )
-                            }
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          />
+                          <div className="mt-1 flex items-center">
+                            <input
+                              type="text"
+                              value={account.accountName}
+                              onChange={(e) =>
+                                handleBankAccountChange(
+                                  account.id,
+                                  "accountName",
+                                  e.target.value
+                                )
+                              }
+                              readOnly={account.isVerified}
+                              className={`block w-full rounded-md shadow-sm sm:text-sm ${
+                                account.isVerified
+                                  ? 'bg-gray-50 border-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                              }`}
+                              placeholder={account.isVerified ? '' : 'Will be auto-filled after verification'}
+                            />
+                            {account.isVerified && (
+                              <CheckCircle className="w-5 h-5 text-green-500 ml-2" />
+                            )}
+                            {account.verificationStatus === 'failed' && (
+                              <AlertCircle className="w-5 h-5 text-red-500 ml-2" />
+                            )}
+                          </div>
+                          {account.verificationMessage && (
+                            <p className={`mt-1 text-sm ${
+                              account.verificationStatus === 'verified' 
+                                ? 'text-green-600' 
+                                : account.verificationStatus === 'failed'
+                                ? 'text-red-600'
+                                : 'text-gray-600'
+                            }`}>
+                              {account.verificationMessage}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-end space-x-4">
                           <div className="flex items-center">
