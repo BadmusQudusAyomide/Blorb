@@ -30,7 +30,7 @@ interface PaystackBanksResponse {
 }
 
 // You'll need to set your Paystack secret key in environment variables
-const PAYSTACK_SECRET_KEY = process.env.REACT_APP_PAYSTACK_SECRET_KEY || '';
+const PAYSTACK_SECRET_KEY = import.meta.env.VITE_PAYSTACK_SECRET_KEY || '';
 
 /**
  * Fetches list of Nigerian banks from Paystack
