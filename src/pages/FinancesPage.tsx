@@ -114,8 +114,6 @@ const FinancesPage = () => {
     useState<BankAccount | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   // New state for real payment tracking
-  const [sellerFinancialRecord, setSellerFinancialRecord] = useState<any>(null);
-  const [walletCredits, setWalletCredits] = useState<any[]>([]);
   const [actualAmountReceived, setActualAmountReceived] = useState(0);
   const [realAvailableBalance, setRealAvailableBalance] = useState(0);
 
@@ -128,16 +126,14 @@ const FinancesPage = () => {
 
       // Fetch seller financial record (real payment data)
       const financialRecord = await getSellerFinancialStatus(user.uid);
-      setSellerFinancialRecord(financialRecord);
       
       if (financialRecord) {
         setActualAmountReceived(financialRecord.actualAmountReceived || 0);
         setRealAvailableBalance(financialRecord.availableBalance || 0);
       }
 
-      // Fetch wallet credits
-      const walletCreditsData = await getSellerWalletCredits(user.uid);
-      setWalletCredits(walletCreditsData);
+      // Fetch wallet credits for potential future use
+      await getSellerWalletCredits(user.uid);
 
       // Fetch transactions
       const transactionsRef = collection(db, "transactions");
@@ -198,14 +194,16 @@ const FinancesPage = () => {
       setOrders(ordersData);
       
       // Use real payment amounts if available, fallback to legacy calculation
-      const revenue = financialRecord?.actualAmountReceived || 
-        ordersData
-          .filter(
-            (order) =>
-              order.sellerStatuses &&
-              order.sellerStatuses[user?.uid || ""]?.status === "approved"
-          )
-          .reduce((sum, order) => sum + (order.total || 0), 0);
+      const approvedOrdersRevenue = ordersData
+        .filter(
+          (order) =>
+            order.sellerStatuses &&
+            order.sellerStatuses[user?.uid || ""]?.status === "approved"
+        )
+        .reduce((sum, order) => sum + (order.total || 0), 0);
+      
+      // Use the actual amount received from wallet service, or fallback to approved orders total
+      const revenue = financialRecord?.actualAmountReceived || approvedOrdersRevenue;
       setTotalRevenue(revenue);
     } catch (error) {
       console.error("Error fetching data:", error);

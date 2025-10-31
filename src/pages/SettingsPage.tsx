@@ -134,7 +134,6 @@ const SettingsPage = () => {
     }
   });
 
-  const [loading] = useState(false);
   const [banks, setBanks] = useState<any[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
 

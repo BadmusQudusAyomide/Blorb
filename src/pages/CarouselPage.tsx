@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopBar from '../components/dashboard/TopBar';
+import { usePaystack } from '../hooks/usePaystack';
 import { 
   Image as ImageIcon,
   Check,
@@ -62,6 +63,7 @@ const CarouselPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const { initiatePayment, verifyPayment, loading: paymentLoading, error: paymentError } = usePaystack();
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
   const [pastAds, setPastAds] = useState<CarouselItem[]>([]);
@@ -186,6 +188,40 @@ const CarouselPage = () => {
     setSuccess(null);
   }, [currentStep]);
 
+  // Handle payment callback on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const reference = urlParams.get('reference');
+
+    if (paymentStatus === 'success' && reference) {
+      // Verify payment
+      verifyPayment(reference).then((success) => {
+        if (success) {
+          setSuccess('Payment successful! Your carousel ad has been submitted for review.');
+          // Reset form
+          setCurrentStep(1);
+          setSelectedPlan(null);
+          setFormData({
+            title: '',
+            description: '',
+            link: '',
+            image: ''
+          });
+          // Refresh past ads
+          if (activeTab === 'history') {
+            fetchPastAds();
+          }
+        } else {
+          setError('Payment verification failed. Please contact support.');
+        }
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [verifyPayment, activeTab, fetchPastAds]);
+
   // Handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
@@ -257,56 +293,44 @@ const CarouselPage = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // Handle final submission
+  // Handle final submission with real Paystack payment
   const handleSubmit = async () => {
-    if (!user || !selectedPlan) return;
+    if (!user || !selectedPlan || !user.email) return;
 
     setProcessing(true);
+    setError(null);
+    
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Validate required fields
+      if (!formData.image || !formData.title || !formData.description) {
+        setError('Please fill in all required fields');
+        return;
+      }
 
-      const carouselData: CarouselItem = {
-        ...formData as Required<Pick<CarouselItem, 'image' | 'title' | 'description'>>,
-        link: formData.link || '',
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        days: selectedPlan.days,
-        price: selectedPlan.price,
-        paymentStatus: 'completed',
-        userId: user.uid,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-        await addDoc(collection(db, 'carousel'), carouselData);
-      setSuccess('Payment successful! Your carousel ad has been submitted for review.');
-
-      // Reset form after successful submission
-      setTimeout(() => {
-        setCurrentStep(1);
-        setSelectedPlan(null);
-      setFormData({
-        title: '',
-        description: '',
-        link: '',
-          image: ''
-        });
-        setPaymentData({
-          cardNumber: '4111111111111111',
-          expiryDate: '12/25',
-          cvv: '123',
-          cardName: 'Test User'
-        });
-        // Refresh past ads
-        if (activeTab === 'history') {
-          fetchPastAds();
+      // Initiate real Paystack payment
+      await initiatePayment(
+        user.email,
+        user.uid,
+        {
+          id: selectedPlan.id,
+          name: selectedPlan.name,
+          price: selectedPlan.price,
+          days: selectedPlan.days,
+        },
+        {
+          title: formData.title!,
+          description: formData.description!,
+          image: formData.image!,
+          link: formData.link,
         }
-      }, 3000);
+      );
 
+      // The payment hook will redirect to Paystack
+      // Success handling will be done in the callback
+      
     } catch (error) {
-      console.error('Error processing payment:', error);
-      setError('Payment failed. Please try again.');
+      console.error('Error initiating payment:', error);
+      setError(paymentError || 'Payment initialization failed. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -778,18 +802,18 @@ const CarouselPage = () => {
                     </button>
                     <button
                       onClick={handleSubmit}
-                      disabled={processing}
+                      disabled={processing || paymentLoading}
                       className="flex items-center px-6 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50"
                     >
-                      {processing ? (
+                      {(processing || paymentLoading) ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing...
+                          {paymentLoading ? 'Redirecting to Payment...' : 'Processing...'}
                         </>
                       ) : (
                         <>
                           <CreditCard className="w-4 h-4 mr-2" />
-                          Pay {formatNaira(selectedPlan.price + processingFee)}
+                          Pay with Paystack - {formatNaira(selectedPlan.price + processingFee)}
                         </>
                       )}
                     </button>
