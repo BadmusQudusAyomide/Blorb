@@ -18,7 +18,7 @@ import {
   Clock,
   ExternalLink
 } from 'lucide-react';
-import { collection, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase.config';
 import { uploadImage } from '../utils/cloudinary';
 

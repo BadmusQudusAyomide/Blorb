@@ -1,6 +1,6 @@
 // src/services/paystackService.ts
 import { db } from '../firebase.config';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 
 interface PaystackPaymentData {
   email: string;
@@ -44,13 +44,11 @@ interface PaystackVerificationResponse {
 }
 
 class PaystackService {
-  private readonly publicKey: string;
   private readonly secretKey: string;
   private readonly baseUrl = 'https://api.paystack.co';
 
   constructor() {
     // In production, these should be environment variables
-    this.publicKey = process.env.REACT_APP_PAYSTACK_PUBLIC_KEY || 'pk_test_your_public_key';
     this.secretKey = process.env.REACT_APP_PAYSTACK_SECRET_KEY || 'sk_test_your_secret_key';
   }
 
@@ -211,10 +209,7 @@ class PaystackService {
         throw new Error(`Payment failed: ${data.gateway_response}`);
       }
 
-      // Update payment record
-      const paymentQuery = collection(db, 'payments');
-      // Note: In a real app, you'd query by reference to find the document
-      // For now, we'll assume you have the document ID
+      // Note: In a real app, you'd query by reference to find and update the payment document
 
       // Create carousel ad from metadata
       if (data.metadata) {
