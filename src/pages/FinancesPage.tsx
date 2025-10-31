@@ -8,7 +8,6 @@ import {
   orderBy,
   getDocs,
   Timestamp,
-  addDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -41,14 +40,8 @@ import {
 } from "recharts";
 import { 
   getSellerFinancialStatus, 
-  getSellerWalletCredits,
-  updateBalanceAfterWithdrawal 
+  getSellerWalletCredits
 } from "../services/walletService";
-import type { 
-  SellerFinancialRecord, 
-  WalletCredit 
-} from "../types/payment";
-import { PLATFORM_FEE_PERCENTAGE, SELLER_PERCENTAGE } from "../utils/paymentCalculations";
 
 interface Transaction {
   id: string;
@@ -121,8 +114,8 @@ const FinancesPage = () => {
     useState<BankAccount | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   // New state for real payment tracking
-  const [sellerFinancialRecord, setSellerFinancialRecord] = useState<SellerFinancialRecord | null>(null);
-  const [walletCredits, setWalletCredits] = useState<WalletCredit[]>([]);
+  const [sellerFinancialRecord, setSellerFinancialRecord] = useState<any>(null);
+  const [walletCredits, setWalletCredits] = useState<any[]>([]);
   const [actualAmountReceived, setActualAmountReceived] = useState(0);
   const [realAvailableBalance, setRealAvailableBalance] = useState(0);
 

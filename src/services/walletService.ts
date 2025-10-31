@@ -19,6 +19,7 @@ import type {
     SellerFinancialRecord,
     PaymentSplit
 } from '../types/payment';
+import { PLATFORM_FEE_PERCENTAGE } from '../utils/paymentCalculations';
 
 /**
  * Process wallet credit for a single seller when they approve an order

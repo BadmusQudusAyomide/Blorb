@@ -26,12 +26,13 @@ import {
   Check,
   DollarSign,
   Info,
+  X,
 } from "lucide-react";
 import TopBar from "../components/dashboard/TopBar";
 import Sidebar from "../components/dashboard/Sidebar";
 import { formatCurrency } from "../utils/formatters";
-import { getSellerSplit, formatPaymentBreakdown } from "../utils/paymentCalculations";
-import type { EnhancedOrder, PaymentSplit } from "../types/payment";
+import { getSellerSplit } from "../utils/paymentCalculations";
+import type { PaymentSplit } from "../types/payment";
 
 interface OrderItem {
   id: string;
@@ -316,7 +317,7 @@ const OrdersPage = () => {
 
         // If this is the last seller to approve, mark the order as processing
         const allSellersApproved = Object.entries(updatedSellerStatuses)
-          .every(([sellerId, sellerStatus]) => sellerStatus.status === 'approved');
+          .every(([, sellerStatus]) => sellerStatus.status === 'approved');
         
         if (allSellersApproved) {
           await updateDoc(orderRef, {

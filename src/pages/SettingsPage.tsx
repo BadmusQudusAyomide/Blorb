@@ -6,8 +6,7 @@ import { uploadImage } from "../utils/cloudinary";
 import {
   verifyBankAccount,
   fetchNigerianBanks,
-  validateAccountNumber,
-  formatAccountNumber
+  validateAccountNumber
 } from "../utils/paystackVerification";
 import {
   X,
@@ -76,16 +75,16 @@ interface FormData {
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-// Security token generation (simple client-side implementation)
-// In production, consider calling a backend endpoint for more secure token generation
-const generateSecurityToken = (): string => {
-  const timestamp = Date.now().toString();
-  const random = Math.random().toString(36).substring(2);
-  return btoa(`${timestamp}:${random}:${seller?.id || 'unknown'}`).slice(0, 32);
-};
 
 const SettingsPage = () => {
   const { seller, updateSellerProfile } = useAuth();
+  
+  // Security token generation (simple client-side implementation)
+  const generateSecurityToken = (): string => {
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2);
+    return btoa(`${timestamp}:${random}:${seller?.id || 'unknown'}`).slice(0, 32);
+  };
   const [isOpen, setIsOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -96,12 +95,12 @@ const SettingsPage = () => {
         {
           id: "1",
           bankName: seller.bankDetails.bankName,
-          bankCode: seller.bankDetails.bankCode || "",
+          bankCode: (seller.bankDetails as any).bankCode || "",
           accountNumber: seller.bankDetails.accountNumber,
           accountName: seller.bankDetails.accountName,
           isDefault: true,
-          isVerified: seller.bankDetails.isVerified || false,
-          verificationStatus: seller.bankDetails.isVerified ? 'verified' : 'pending',
+          isVerified: (seller.bankDetails as any).isVerified || false,
+          verificationStatus: (seller.bankDetails as any).isVerified ? 'verified' : 'pending',
         },
       ]
       : []
@@ -125,7 +124,7 @@ const SettingsPage = () => {
     taxId: seller?.taxId || "",
     socialMedia: seller?.socialMedia || {},
     storeDescription: "",
-    verification: seller?.verification || {
+    verification: (seller as any)?.verification || {
       selfieImage: "",
       ninImage: "",
       ninNumber: "",
@@ -135,7 +134,7 @@ const SettingsPage = () => {
     }
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [banks, setBanks] = useState<any[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
 
@@ -251,7 +250,7 @@ const SettingsPage = () => {
     // Validate file
     const validation = validateFile(file);
     if (!validation.isValid) {
-      setError(validation.error);
+      setError(validation.error || null);
       return;
     }
 
